@@ -1,0 +1,622 @@
+import fs from "node:fs/promises";
+import { SpreadsheetFile, Workbook } from "@oai/artifact-tool";
+
+const workbook = Workbook.create();
+workbook.comments.setSelf({ displayName: "Codex" });
+
+const outputPath = "gcp_medallion_learning_plan_jira_import.xlsx";
+
+const toolNotes = [
+  ["Decision", "Use Jira Free as the primary personal project-management tool."],
+  ["Why", "It is closest to real-world agile delivery practice, supports backlog/list/board/timeline/calendar/summary views, and stays free for a solo learner."],
+  ["How GitHub fits", "Use GitHub for repository, issues tied to code, pull requests, and optional GitHub Projects. Jira remains the study tracker."],
+  ["Workbook import approach", "Use the Jira_Import sheet as the import source. In Excel, save that sheet as CSV when ready for Jira bulk issue import."],
+  ["Current official free-plan note", "Atlassian lists Jira Free as free forever for up to 10 users with 2 GB storage and Community Support. GitHub Projects supports table, board, and roadmap-style planning integrated with issues and pull requests."],
+];
+
+const epics = [
+  ["E01", "Project management and study operating model", "As a solo learner, I want a realistic agile board and backlog so that I can practice delivery rituals while studying GCP data engineering.", "Jira workspace, workflow, labels, fields, and import process are ready.", "Jira Free", "High"],
+  ["E02", "Repository and VS Code foundation", "As a developer, I want GitHub and VS Code configured so that all learning work happens from a professional dev environment.", "Repo cloned/opened in VS Code, Git identity configured, terminal workflow validated.", "GitHub, VS Code", "High"],
+  ["E03", "GCP first-time setup and cost guardrails", "As a cloud learner, I want a controlled GCP project so that I can practice safely on free credits and avoid surprise costs.", "Project, billing, APIs, IAM, budget alerts, and cleanup routine are documented.", "GCP IAM, Billing, APIs", "High"],
+  ["E04", "Synthetic retail dataset generation", "As a data engineer, I want generated CSV and JSON datasets so that I can build a full medallion pipeline without external data dependencies.", "Generated local data includes customers, products, orders, order_items, payments, shipments, and clickstream events.", "Local Python, Git", "High"],
+  ["E05", "Bronze raw landing zone in GCS", "As a data engineer, I want raw immutable files in GCS so that the lake has a traceable source-of-record layer.", "CSV and JSON files are uploaded to date-partitioned bronze paths with a manifest.", "GCS, gcloud, gsutil", "High"],
+  ["E06", "Dataproc and Spark development environment", "As a Spark learner, I want Dataproc reachable from VS Code over SSH so that I can develop and run Spark jobs remotely.", "Single-node Dataproc cluster is created, SSH works, Spark UI is reachable, and repo is available on the cluster.", "Dataproc, Compute Engine, VS Code Remote SSH", "High"],
+  ["E07", "Silver standardization pipeline", "As a data engineer, I want bronze data converted to clean Parquet tables so that downstream processing is reliable and typed.", "Silver jobs validate schemas, deduplicate, normalize timestamps, and write partitioned Parquet.", "Spark, GCS, Dataproc", "High"],
+  ["E08", "Gold analytics layer", "As an analyst, I want curated BigQuery marts so that sales, fulfillment, and customer metrics are queryable.", "Gold fact/dimension tables and aggregate marts are available in BigQuery with validation queries.", "BigQuery, Dataproc connector", "High"],
+  ["E09", "Airflow orchestration with Cloud Composer", "As an operator, I want the pipeline scheduled and observable so that medallion jobs can be run end to end.", "Composer DAG runs bronze checks, silver Spark jobs, gold loads, and validation tasks.", "Cloud Composer, Airflow, Dataproc", "High"],
+  ["E10", "Testing, documentation, and teardown", "As a responsible learner, I want checks, notes, and cleanup steps so that the project is repeatable and low-cost.", "Runbook, tests, screenshots checklist, and cleanup commands are complete.", "GitHub, GCP", "Medium"],
+];
+
+const tasks = [
+  ["T001","E01","Task","Create Jira Free site","Sign up or sign in to Atlassian, create a Jira project named GCP Medallion Learning, and choose a Scrum or Kanban template.","Open Atlassian, create Jira Free project, set project key GCPDE, confirm backlog and board are visible.","Project exists and can accept imported tasks.","Jira","Browser navigation","High",1,"To Do","","setup;jira","Free plan is sufficient for one user."],
+  ["T002","E01","Task","Configure Jira workflow columns","Create or confirm statuses: Backlog, To Do, In Progress, Blocked, Review, Done.","Open project settings, inspect workflow/board columns, map statuses to columns.","Board columns match the study workflow.","Jira","Project management practice","High",1,"To Do","T001","setup;jira","No paid features required."],
+  ["T003","E01","Task","Create Jira labels and components","Add labels or components for setup, github, gcp, gcs, dataproc, spark, bigquery, airflow, qa, docs, cost.","Use project settings or import labels from the task sheet.","Imported work can be filtered by technology area.","Jira","Backlog organization","Medium",1,"To Do","T001","setup;jira","No paid features required."],
+  ["T004","E01","Task","Import task workbook into Jira","Save the Jira_Import sheet as CSV and use Jira external system import or issue import.","Map Summary, Issue Type, Description, Priority, Labels, Epic Link or Parent, Story Points, and Status fields.","Imported issues preserve task order and grouping.","Jira","CSV import practice","High",2,"To Do","T001","setup;jira","Jira import behavior may vary by project type."],
+  ["T005","E01","Task","Create weekly study cadence","Add recurring personal calendar blocks for planning, build, review, and cleanup.","Pick 3-5 study windows per week and link them to Jira sprints or weekly board reviews.","Study cadence is visible and realistic.","Jira","Agile planning","Medium",1,"To Do","T001","planning","No paid features required."],
+  ["T006","E02","Task","Check Git installation from VS Code terminal","Open VS Code terminal in this repo and run git --version, git status, and git branch.","Record output in notes if Git is missing or repo is not initialized.","Git works from the integrated terminal.","GitHub, VS Code","Terminal basics","High",1,"To Do","","github;vscode;terminal","No GCP cost."],
+  ["T007","E02","Task","Configure Git identity","Run git config --global user.name and user.email with your GitHub identity.","Validate with git config --global --list.","Commits will show the correct author.","GitHub","Terminal config","High",1,"To Do","T006","github;terminal","No GCP cost."],
+  ["T008","E02","Task","Authenticate GitHub CLI or SSH","Install or validate GitHub CLI, then run gh auth login, or configure SSH keys for GitHub.","Use either HTTPS with gh auth or SSH; test with gh repo list or ssh -T git@github.com.","GitHub authentication works from VS Code terminal.","GitHub, VS Code","Terminal auth","High",2,"To Do","T006","github;vscode;terminal","No GCP cost."],
+  ["T009","E02","Task","Create GitHub repository for playground","Create a new GitHub repository for your medallion learning work or push this folder as a branch/project.","Use GitHub UI or gh repo create, then add remote origin if needed.","Remote repo exists and local code can push.","GitHub","Repo management","High",2,"To Do","T008","github","No GCP cost."],
+  ["T010","E02","Task","Create branch strategy","Use main for stable notes and codex or feature branches for changes.","Create a first branch such as codex/jason-playground-plan and push it.","Branching workflow is ready for pull requests.","GitHub","Git branching","Medium",1,"To Do","T009","github","No GCP cost."],
+  ["T011","E02","Task","Install VS Code extensions","Install Python, Jupyter, Google Cloud Code, Remote SSH, GitHub Pull Requests, YAML, and optional Markdown extensions.","Use VS Code Extensions panel and verify each extension is enabled.","VS Code is ready for local, cloud, and remote work.","VS Code","IDE setup","High",2,"To Do","","vscode;setup","No GCP cost."],
+  ["T012","E02","Task","Create local project structure","Inside JasonPlayground, create folders for datasets, src, dags, sql, notebooks, docs, and scripts.","Use terminal mkdir commands and commit the structure with placeholder README files if needed.","Folder layout supports medallion development.","VS Code, Git","Windows file management","High",1,"To Do","T006","vscode;terminal","No GCP cost."],
+  ["T013","E02","Task","Practice Windows terminal file operations","Run pwd, dir, cd, mkdir, copy, move, rename, and remove-item on safe scratch files.","Keep the commands in docs/terminal_cheatsheet.md.","You can manage local files without leaving VS Code.","VS Code","Windows terminal","Medium",1,"To Do","T012","terminal;docs","No GCP cost."],
+  ["T014","E03","Task","Create or select GCP account","Sign in to Google Cloud and confirm billing/free trial status before creating resources.","Record account email, billing account name, and whether free credits are active in a private note outside git.","GCP account is ready and billing status is understood.","GCP","Console navigation","High",1,"To Do","","gcp;setup;cost","Budget alerts are still required."],
+  ["T015","E03","Task","Create GCP project","Create a project such as jason-gcp-de-playground with a unique project id.","Use Console or gcloud projects create if organization policy allows it.","Dedicated learning project exists.","GCP Resource Manager","gcloud practice","High",1,"To Do","T014","gcp;setup","Project itself is not the main cost source."],
+  ["T016","E03","Task","Install and initialize Google Cloud CLI","Install gcloud, run gcloud init, login, and set the active project.","Validate with gcloud config list and gcloud projects describe PROJECT_ID.","gcloud works from VS Code terminal.","Google Cloud CLI","Terminal auth","High",2,"To Do","T015","gcloud;vscode;terminal","No direct cost."],
+  ["T017","E03","Task","Set default region and zone","Choose a low-cost region and set compute/Dataproc defaults.","Run gcloud config set compute/region and compute/zone.","Commands do not need region flags every time.","GCP","gcloud config","Medium",1,"To Do","T016","gcloud;setup","Region impacts price and availability."],
+  ["T018","E03","Task","Enable required APIs","Enable Compute Engine, Dataproc, Cloud Storage, BigQuery, Cloud Composer, IAM, Secret Manager, and Cloud Logging APIs.","Use Console or gcloud services enable for each service.","All planned services can be created when needed.","GCP APIs","gcloud services","High",2,"To Do","T016","gcp;setup","Enabling APIs is generally free; resources are not."],
+  ["T019","E03","Task","Create budget alert","Create a low monthly budget alert, for example USD 5 or 10, with notifications at 50, 80, and 100 percent.","Use Billing Budgets and Alerts in Console.","Cost alerts are active before creating compute resources.","GCP Billing","Console navigation","High",1,"To Do","T014","cost;setup","Critical guardrail for free-trial use."],
+  ["T020","E03","Task","Create service account","Create a service account for pipeline execution with least-privilege roles for storage, BigQuery, Dataproc, and Composer as needed.","Start narrow, then add roles only when a command fails due to missing permission.","Pipeline identity exists and keys are avoided unless truly needed.","IAM","Security practice","High",2,"To Do","T018","iam;security","No direct cost."],
+  ["T021","E03","Task","Document cleanup checklist","Create docs/cleanup_checklist.md covering Dataproc clusters, Composer environments, static IPs, buckets, BigQuery datasets, and budgets.","Add exact gcloud delete commands as you learn them.","Cleanup steps are ready before costly resources exist.","GCP","Cost hygiene","High",1,"To Do","T018","cost;docs","Prevents idle cloud spend."],
+  ["T022","E04","Story","Design synthetic retail domain","Define tables for customers, products, orders, order_items, payments, shipments, inventory, stores, and clickstream events.","Write source-to-target notes and expected row counts in Dataset_Design sheet or docs.","Dataset design supports bronze, silver, and gold transformations.","Local data","Data modeling","High",3,"To Do","","dataset;design","No GCP cost."],
+  ["T023","E04","Task","Create dataset generator script","Write a Python script that generates repeatable CSV and JSON files using a fixed seed.","Output small, medium, and optional large profiles.","Generated files can be recreated exactly.","Python","Local development","High",3,"To Do","T022","dataset;python","No GCP cost."],
+  ["T024","E04","Task","Generate CSV source files","Generate customers.csv, products.csv, stores.csv, orders.csv, order_items.csv, payments.csv, shipments.csv, and inventory.csv.","Use date-partition-friendly fields such as order_date and event_date.","CSV files exist with headers and realistic values.","Python","File generation","High",2,"To Do","T023","dataset;csv","No GCP cost."],
+  ["T025","E04","Task","Generate JSON event files","Generate clickstream JSON lines and order_status_event JSON lines with nested fields.","Include event_id, event_ts, user/session ids, and payload attributes.","JSON files exercise semi-structured ingestion.","Python","File generation","High",2,"To Do","T023","dataset;json","No GCP cost."],
+  ["T026","E04","Task","Create data quality expectations","Define expected row counts, unique keys, allowed statuses, required columns, and referential integrity checks.","Store expectations in docs/data_quality_rules.md or a YAML file.","Each dataset has at least three validation rules.","Python, Spark","QA design","High",2,"To Do","T024","qa;dataset","No GCP cost."],
+  ["T027","E05","Task","Create GCS bucket naming plan","Choose globally unique bucket names for bronze, silver, gold, scripts, and temp or use one bucket with prefixes.","Record naming convention and region in docs/gcp_objects.md.","Bucket plan is clear before creation.","GCS","Architecture planning","High",1,"To Do","T017","gcs;design","Bucket storage costs are small but real."],
+  ["T028","E05","Task","Create GCS bucket","Use gcloud storage buckets create or Console to create the project bucket in your chosen region.","Enable uniform bucket-level access unless a lesson requires object ACLs.","Bucket exists and is visible from CLI.","GCS","gcloud storage","High",1,"To Do","T027","gcs;gcloud","Storage charges apply by volume."],
+  ["T029","E05","Task","Create bronze prefix structure","Create prefixes such as bronze/csv/orders/load_date=YYYY-MM-DD and bronze/json/clickstream/load_date=YYYY-MM-DD.","Use local path mirrors before uploading.","Bronze structure follows medallion raw-zone convention.","GCS","File layout","High",1,"To Do","T028","gcs;bronze","No meaningful cost beyond storage."],
+  ["T030","E05","Task","Upload bronze CSV files","Use gcloud storage cp or gsutil cp to upload generated CSV files to bronze paths.","Validate with gcloud storage ls and compare local file counts.","CSV files are in GCS bronze.","GCS","CLI upload","High",2,"To Do","T024;T029","gcs;bronze;csv","Storage and operation charges apply."],
+  ["T031","E05","Task","Upload bronze JSON files","Upload generated JSON files to bronze/json paths and validate object names.","Use recursive commands and avoid overwriting unrelated paths.","JSON files are in GCS bronze.","GCS","CLI upload","High",2,"To Do","T025;T029","gcs;bronze;json","Storage and operation charges apply."],
+  ["T032","E05","Task","Create bronze manifest","Generate a manifest with source file name, path, row count, checksum, format, and load timestamp.","Store manifest locally and in GCS bronze/manifests.","Bronze files are auditable.","GCS, Python","Metadata practice","Medium",2,"To Do","T030;T031","gcs;bronze;qa","No major cost."],
+  ["T033","E06","Task","Create single-node Dataproc cluster","Create a short-lived single-node cluster with component gateway enabled and optional JupyterLab if desired.","Use small machine types and labels such as purpose=learning owner=jason.","Cluster starts successfully.","Dataproc","Console and gcloud","High",3,"To Do","T018;T019","dataproc;spark;cost","Delete when idle; compute costs can grow quickly."],
+  ["T034","E06","Task","Validate SSH from terminal","Run gcloud compute ssh to connect to the Dataproc master node.","Exit and reconnect until the workflow is comfortable.","SSH works from VS Code terminal.","Dataproc, Compute Engine","SSH practice","High",2,"To Do","T033","dataproc;ssh;terminal","Cluster must be running."],
+  ["T035","E06","Task","Connect VS Code Remote SSH to Dataproc","Configure Remote SSH target using gcloud-generated SSH config or direct host settings.","Open a remote VS Code window on the Dataproc node.","VS Code can edit files on the cluster.","VS Code, Dataproc","Remote development","High",3,"To Do","T034;T011","vscode;dataproc;ssh","Cluster must be running."],
+  ["T036","E06","Task","Clone repository on Dataproc","Clone the GitHub repository on the cluster and checkout the working branch.","Validate git status and project files on the remote host.","Remote cluster has project code.","GitHub, Dataproc","Remote Git","High",1,"To Do","T035;T009","github;dataproc","Cluster must be running."],
+  ["T037","E06","Task","Validate Spark shell and PySpark","Run spark-sql --version and pyspark, then read a small bronze file from GCS.","Confirm Spark can access GCS without manual credential files.","Spark can read the raw lake path.","Dataproc, Spark, GCS","Spark CLI","High",2,"To Do","T030;T033","spark;dataproc;gcs","Cluster must be running."],
+  ["T038","E06","Task","Open Spark UI through component gateway","Find the Dataproc web interfaces and open Spark History Server or Spark UI.","Run a sample job and locate it in the UI.","You can inspect job stages and logs.","Dataproc","UI navigation","Medium",1,"To Do","T033;T037","dataproc;spark;ui","Cluster must be running."],
+  ["T039","E07","Story","Build bronze-to-silver schema reader","Create Spark logic to read CSV and JSON bronze files with explicit schemas.","Avoid inferSchema for production-style code; put schemas in code or config.","Spark reads all source datasets with expected data types.","Spark, GCS","PySpark development","High",5,"To Do","T037","spark;silver","Cluster must be running for validation."],
+  ["T040","E07","Task","Implement silver customers transformation","Clean customer names, emails, dates, geography fields, and deduplicate by customer_id.","Write Parquet partitioned by load_date or customer_region if useful.","silver/customers path is clean and queryable.","Spark, GCS","PySpark","High",3,"To Do","T039","spark;silver","Cluster must be running for validation."],
+  ["T041","E07","Task","Implement silver products transformation","Standardize product categories, prices, active flags, and effective dates.","Validate product_id uniqueness and nonnegative prices.","silver/products path is clean and queryable.","Spark, GCS","PySpark","High",3,"To Do","T039","spark;silver","Cluster must be running for validation."],
+  ["T042","E07","Task","Implement silver orders transformation","Normalize order timestamps, statuses, customer references, and order dates.","Partition by order_date and reject invalid statuses into a quarantine path.","silver/orders path is clean and partitioned.","Spark, GCS","PySpark","High",5,"To Do","T039","spark;silver","Cluster must be running for validation."],
+  ["T043","E07","Task","Implement silver order_items transformation","Validate item quantities, subtotal calculations, and product references.","Recalculate subtotal and flag mismatches for review.","silver/order_items path is clean and validated.","Spark, GCS","PySpark","High",5,"To Do","T039","spark;silver","Cluster must be running for validation."],
+  ["T044","E07","Task","Implement silver payments transformation","Standardize payment methods, amounts, payment status, and timestamps.","Validate no successful negative payments unless intentionally generated as refunds.","silver/payments path is clean and typed.","Spark, GCS","PySpark","Medium",3,"To Do","T039","spark;silver","Cluster must be running for validation."],
+  ["T045","E07","Task","Implement silver shipments transformation","Normalize carrier, tracking status, shipped_at, delivered_at, and delivery duration.","Flag impossible delivery dates into quarantine.","silver/shipments path is clean and typed.","Spark, GCS","PySpark","Medium",3,"To Do","T039","spark;silver","Cluster must be running for validation."],
+  ["T046","E07","Task","Implement silver clickstream transformation","Flatten JSON event payloads and standardize event timestamps, event names, session ids, and device fields.","Partition by event_date.","silver/clickstream path is clean and partitioned.","Spark, GCS","PySpark JSON","Medium",5,"To Do","T039","spark;silver;json","Cluster must be running for validation."],
+  ["T047","E07","Task","Create reusable Spark job entrypoint","Create a parameterized PySpark job with arguments for source path, target path, run date, and environment.","Run it locally on Dataproc using spark-submit.","Job can run one dataset at a time using parameters.","Spark, Dataproc","spark-submit","High",5,"To Do","T040;T041;T042","spark;dataproc","Cluster must be running."],
+  ["T048","E07","Task","Submit silver job through Dataproc Jobs","Use gcloud dataproc jobs submit pyspark with parameters for each silver dataset.","Record job ids and logs.","Silver transformations run as managed Dataproc jobs.","Dataproc, Spark","gcloud dataproc","High",3,"To Do","T047","dataproc;spark;silver","Cluster must be running."],
+  ["T049","E07","Task","Validate silver outputs","Use gcloud storage ls, spark-sql, and PySpark count checks to confirm output paths, partitions, row counts, and schema.","Compare against data quality expectations.","Silver layer passes checks.","Spark, GCS","QA","High",3,"To Do","T048;T026","qa;silver","Cluster must be running."],
+  ["T050","E08","Task","Create BigQuery datasets","Create datasets such as bronze_meta, silver_external, and gold_marts or a clean equivalent naming convention.","Set region to match GCS/Dataproc where possible.","BigQuery datasets exist.","BigQuery","bq CLI or Console","High",1,"To Do","T018","bigquery;gold","BigQuery storage/query charges may apply."],
+  ["T051","E08","Task","Create external tables over silver Parquet","Create BigQuery external tables or BigLake-style references for silver Parquet paths.","Validate schema and partition pruning where available.","BigQuery can query silver data.","BigQuery, GCS","SQL and bq CLI","High",3,"To Do","T049;T050","bigquery;silver","Query costs may apply."],
+  ["T052","E08","Task","Design gold star schema","Define dim_customer, dim_product, dim_store, dim_date, fact_order_item, fact_payment, fact_shipment, and aggregate marts.","Document grain and primary keys for each table.","Gold model has clear grain and relationships.","BigQuery","Data modeling","High",3,"To Do","T051","bigquery;gold;design","No major cost until data is materialized/queried."],
+  ["T053","E08","Task","Build gold dimensions","Use BigQuery SQL or Spark to populate customer, product, store, and date dimensions.","Include surrogate-key strategy or document why natural keys are acceptable for learning.","Dimension tables are queryable and documented.","BigQuery, Spark","SQL","High",5,"To Do","T052","bigquery;gold","Query/storage costs apply."],
+  ["T054","E08","Task","Build gold fact tables","Create fact_order_item, fact_payment, and fact_shipment from silver tables.","Validate joins and amounts.","Fact tables are at documented grain.","BigQuery, Spark","SQL","High",5,"To Do","T052","bigquery;gold","Query/storage costs apply."],
+  ["T055","E08","Task","Build daily sales mart","Aggregate revenue, order count, item count, customer count, and average order value by date, product, and store.","Compare totals to silver source data.","daily_sales_mart is ready for analysis.","BigQuery","SQL analytics","High",3,"To Do","T053;T054","bigquery;gold","Query/storage costs apply."],
+  ["T056","E08","Task","Build fulfillment mart","Aggregate shipped, delivered, delayed, and average delivery duration by carrier and date.","Validate delayed shipment logic.","fulfillment_mart is ready for analysis.","BigQuery","SQL analytics","Medium",3,"To Do","T054","bigquery;gold","Query/storage costs apply."],
+  ["T057","E08","Task","Build customer behavior mart","Join sales and clickstream activity by customer/date where generated data supports it.","Calculate sessions, product views, purchases, and conversion rate.","customer_behavior_mart is ready for analysis.","BigQuery","SQL analytics","Medium",5,"To Do","T046;T054","bigquery;gold","Query/storage costs apply."],
+  ["T058","E08","Task","Create validation SQL checks","Write SQL checks for row counts, revenue reconciliation, null primary keys, duplicate keys, and invalid date ranges.","Store checks in sql/validation.","Gold layer has repeatable validation queries.","BigQuery","SQL QA","High",3,"To Do","T055;T056;T057","bigquery;qa","Query costs apply."],
+  ["T059","E08","Task","Create analysis notebook or saved queries","Create a small notebook or saved SQL file showing top products, revenue trends, and fulfillment performance.","Use only gold tables.","You can explain the business outputs of the pipeline.","BigQuery, Jupyter","Analytics practice","Medium",2,"To Do","T055","bigquery;docs","Query costs apply."],
+  ["T060","E09","Task","Create Cloud Composer environment","Create a small Composer environment only when ready to orchestrate and delete it after the module if cost is a concern.","Record environment name, region, bucket, and Airflow UI URL.","Composer environment is available.","Cloud Composer","Console and gcloud","High",5,"To Do","T019;T018","airflow;composer;cost","Composer can be costly; use carefully."],
+  ["T061","E09","Task","Prepare local Airflow development folder","Create dags folder and install or document compatible Airflow provider versions for local linting if needed.","Keep DAG code independent of hard-coded project ids where possible.","DAG source folder is ready.","Airflow, VS Code","Python dev","High",2,"To Do","T060;T012","airflow;vscode","Local setup no GCP cost."],
+  ["T062","E09","Task","Create Airflow variables plan","Define variables for project_id, region, bucket, dataproc_cluster, run_date, bronze_prefix, silver_prefix, and gold_dataset.","Create them in Airflow UI or via gcloud composer environments run.","DAG config is externalized.","Airflow","Config management","High",2,"To Do","T060","airflow;config","No major extra cost."],
+  ["T063","E09","Task","Build orchestration DAG skeleton","Create DAG with logical task groups: precheck, bronze_validation, silver_processing, gold_processing, validation, notify_or_log.","Use clear task ids and dependencies.","DAG parses in Airflow UI.","Airflow","DAG development","High",3,"To Do","T061;T062","airflow;dag","Composer must be running."],
+  ["T064","E09","Task","Add bronze validation tasks","Add BashOperator or PythonOperator tasks to check GCS object existence and manifest freshness.","Fail fast if required source files are missing.","Pipeline stops before Spark if bronze is incomplete.","Airflow, GCS","DAG development","High",3,"To Do","T063;T032","airflow;bronze;qa","Composer must be running."],
+  ["T065","E09","Task","Add Dataproc silver tasks","Use Dataproc job operators or gcloud command tasks to submit silver PySpark jobs.","Pass dataset-specific arguments and run date.","Airflow can trigger silver Spark jobs.","Airflow, Dataproc","DAG development","High",5,"To Do","T063;T048","airflow;dataproc;silver","Composer and Dataproc cost apply."],
+  ["T066","E09","Task","Add BigQuery gold tasks","Use BigQueryInsertJobOperator or bq commands to run gold SQL scripts in dependency order.","Parameterize project and dataset names.","Airflow can build gold tables.","Airflow, BigQuery","DAG development","High",5,"To Do","T063;T058","airflow;bigquery;gold","Query costs apply."],
+  ["T067","E09","Task","Deploy DAG to Composer bucket","Copy DAG file to the Composer environment dags bucket using gcloud storage cp or gsutil cp.","Watch Airflow UI for import errors.","DAG appears without parse errors.","Cloud Composer, GCS","CLI deploy","High",2,"To Do","T063","airflow;gcs","Composer must be running."],
+  ["T068","E09","Task","Run DAG manually","Trigger the DAG manually and monitor each task in Airflow UI.","Capture failed logs, fix config, and rerun as needed.","End-to-end DAG succeeds once.","Cloud Composer, Airflow","Operations","High",3,"To Do","T064;T065;T066;T067","airflow;ops","Composer and Dataproc cost apply."],
+  ["T069","E09","Task","Add retry and alert behavior","Set retries, retry delays, task-level timeouts, and failure logging.","Keep alerts simple for solo learning, such as Airflow logs and email if configured.","DAG has realistic operational controls.","Airflow","Operations","Medium",2,"To Do","T068","airflow;ops","No major extra cost."],
+  ["T070","E10","Task","Write architecture README","Document the medallion architecture, GCS paths, Dataproc jobs, BigQuery datasets, and Airflow DAG.","Include a simple text diagram or Mermaid diagram.","A future reader can understand the project.","GitHub, Docs","Documentation","High",2,"To Do","T055;T068","docs","No GCP cost."],
+  ["T071","E10","Task","Create terminal command journal","Maintain docs/terminal_journal.md with commands used for Git, Windows files, gcloud, GCS, Dataproc SSH, and Composer.","Group commands by module and explain placeholders.","You have a reusable command reference.","VS Code","Terminal learning","High",2,"To Do","T013;T016","docs;terminal","No GCP cost."],
+  ["T072","E10","Task","Create troubleshooting log","Track errors, root cause, fix, and prevention notes from setup through orchestration.","Add at least one entry per module.","You build debugging memory as part of the project.","Docs","Learning practice","Medium",1,"To Do","T033","docs;qa","No GCP cost."],
+  ["T073","E10","Task","Add unit-style validation scripts","Create scripts that run local schema checks and SQL validation checks where practical.","Use simple CLI commands that can be repeated.","Core checks are not only manual.","Python, SQL","QA automation","Medium",3,"To Do","T026;T058","qa","Minimal local cost."],
+  ["T074","E10","Task","Create GitHub pull request workflow","Open a PR from the learning branch to main with a checklist and summary of completed modules.","Review changes before merging.","You practice professional code review flow.","GitHub","PR workflow","Medium",2,"To Do","T010;T070","github","No GCP cost."],
+  ["T075","E10","Task","Run final cost cleanup","Delete Composer environment, Dataproc cluster, static IPs, unused buckets, temporary BigQuery tables, and any service-account keys.","Confirm billing dashboard after cleanup.","No idle costly resources remain.","GCP","Cost cleanup","High",2,"To Do","T068;T021","cost;cleanup","Most important cost-control step."],
+  ["T076","E10","Task","Review learning outcomes","Map completed work to skills: Git, VS Code, GCS, Dataproc, Spark, BigQuery, Composer, data modeling, QA, and operations.","Update Jira statuses and write a short retrospective.","Project is ready for next iteration or portfolio polish.","Jira, Docs","Retrospective","Medium",1,"To Do","T075","planning;docs","No GCP cost."],
+];
+
+const detailedRunbook = [
+  ["Phase","Step","Action","Command or Navigation","Expected Result","Parameter Needed"],
+  ["Project Management","1","Create Jira Free project","Atlassian > Jira > Create project > Kanban or Scrum > name GCP Medallion Learning","Project board exists","Atlassian account"],
+  ["Project Management","2","Import workbook tasks","Open Jira_Import sheet, save as CSV, Jira import issues, map fields","Backlog contains epics and tasks","Jira project key"],
+  ["Repo","3","Open this repo in VS Code","File > Open Folder > data-engineering-on-gcp","Integrated terminal starts in repo","Local path"],
+  ["Repo","4","Validate git","git status","Repo status prints clean or with known changes","None"],
+  ["Repo","5","Connect GitHub","gh auth login or SSH key setup","Can push/pull from GitHub","GitHub username"],
+  ["GCP Setup","6","Initialize gcloud","gcloud init","Active account and project set","Project id"],
+  ["GCP Setup","7","Set defaults","gcloud config set compute/region REGION; gcloud config set compute/zone ZONE","Default region/zone configured","REGION, ZONE"],
+  ["GCP Setup","8","Enable APIs","gcloud services enable compute.googleapis.com dataproc.googleapis.com storage.googleapis.com bigquery.googleapis.com composer.googleapis.com secretmanager.googleapis.com","APIs enabled","Project id"],
+  ["Cost","9","Create budget alert","Console > Billing > Budgets and alerts","Email alerts configured","Budget amount"],
+  ["Bronze","10","Create bucket","gcloud storage buckets create gs://BUCKET --location=REGION --uniform-bucket-level-access","Bucket exists","BUCKET, REGION"],
+  ["Bronze","11","Generate local data","Run future dataset generator from src/generate_dataset.py","CSV and JSON files created","Row count profile"],
+  ["Bronze","12","Upload raw files","gcloud storage cp --recursive datasets/raw gs://BUCKET/bronze/load_date=YYYY-MM-DD/","Raw files in GCS","BUCKET, load date"],
+  ["Dataproc","13","Create cluster","Console > Dataproc > Create cluster > Single node > Component gateway enabled","Cluster running","Cluster name, region"],
+  ["Dataproc","14","SSH from terminal","gcloud compute ssh CLUSTER-m --zone=ZONE","Shell opens on master node","Cluster VM name, zone"],
+  ["VS Code Remote","15","Connect Remote SSH","VS Code Remote SSH > connect to Dataproc host","Remote VS Code window opens","SSH host"],
+  ["Spark","16","Read bronze data","pyspark then spark.read.csv('gs://BUCKET/bronze/...')","DataFrame loads","GCS path"],
+  ["Silver","17","Run transformation job","gcloud dataproc jobs submit pyspark src/jobs/bronze_to_silver.py --cluster=CLUSTER --region=REGION -- --dataset orders --run-date YYYY-MM-DD","Silver Parquet written","Cluster, region, bucket, run date"],
+  ["Gold","18","Create BigQuery dataset","bq mk --location=REGION PROJECT_ID:gold_marts","Dataset exists","Project id, region"],
+  ["Gold","19","Run gold SQL","bq query --use_legacy_sql=false < sql/gold/daily_sales_mart.sql","Gold mart created","Dataset names"],
+  ["Composer","20","Create Composer environment","Console > Composer > Create environment, small configuration","Airflow UI available","Environment name, region"],
+  ["Composer","21","Deploy DAG","gcloud storage cp dags/medallion_pipeline.py gs://COMPOSER_BUCKET/dags/","DAG appears in Airflow","Composer bucket"],
+  ["Composer","22","Trigger DAG","Airflow UI > DAG > Trigger","Pipeline run starts","Run date"],
+  ["Validation","23","Run checks","bq query validation SQL and inspect Airflow logs","All checks pass","Project/dataset"],
+  ["Cleanup","24","Delete idle resources","Delete Composer env, Dataproc cluster, static IPs, temp files","No costly idle resources remain","Resource names"],
+];
+
+const nextActions = [
+  ["Order","What to do next","Exact action","Where","Done when"],
+  [1,"Open the workbook","Open gcp_medallion_learning_plan_jira_import.xlsx and read README, Start_Here, and Task_2_Playbook first.","JasonPlayground","You know the recommended tool and first setup sequence."],
+  [2,"Decide your real project parameters","Fill in PROJECT_ID, REGION, ZONE, BUCKET, GITHUB_USER, and REPO_NAME in a private note. Do not commit secrets.","Local note outside git","You have the values needed for commands."],
+  [3,"Create Jira Free project","Create the Jira project and decide whether to import now or manually create only the first few issues.","Jira web UI","Your board exists."],
+  [4,"Use Task_2_Playbook as the actual guide","Follow the playbook from section 01 through 12. Replace placeholders before running commands.","Workbook Task_2_Playbook tab","You can execute steps without guessing the next command."],
+  [5,"Start small before GCP spend","Complete local Git, VS Code, GitHub, and dataset-generation setup before creating Dataproc or Composer.","VS Code terminal","No cloud resources are running yet."],
+  [6,"Create budget alert before compute","Create GCP budget alerts before Dataproc and Composer.","Google Cloud Console","Billing guardrail exists."],
+  [7,"Ask Codex to implement each module","When you reach a coding step, ask Codex to create the script, test it locally, and explain the command you will run.","This repo in VS Code","You are learning while building."],
+];
+
+const task2Playbook = [
+  ["Seq","Section","Goal","Do this","PowerShell / command / script","Fill these placeholders","Expected result","Cost warning"],
+  [1,"00 Parameters","Create a private list of values you will use in commands.","Create a local note outside Git or keep values in your password manager. Do not commit billing details or credentials.","PROJECT_ID=\"your-unique-gcp-project-id\"\nREGION=\"us-central1\"\nZONE=\"us-central1-a\"\nBUCKET=\"your-unique-gcp-project-id-lake-us-central1\"\nCLUSTER=\"jason-dp-dev\"\nCOMPOSER_ENV=\"jason-composer-dev\"\nGITHUB_USER=\"your-github-user\"\nREPO_NAME=\"gcp-medallion-learning\"","PROJECT_ID, REGION, ZONE, BUCKET, CLUSTER, COMPOSER_ENV, GITHUB_USER, REPO_NAME","You have one canonical parameter set to copy into commands.","No cost."],
+  [2,"01 Jira","Create the project-management workspace.","In Jira Free, create a project named GCP Medallion Learning. Use project key GCPDE if available. Choose Kanban if you want simple flow, Scrum if you want sprint practice.","Browser: https://www.atlassian.com/software/jira\nProject name: GCP Medallion Learning\nProject key: GCPDE\nWorkflow columns: Backlog, To Do, In Progress, Blocked, Review, Done","Atlassian account","Jira board exists and can receive imported issues.","Jira Free is fine for one user."],
+  [3,"01 Jira","Import the workbook tasks into Jira.","In Excel, open the Jira_Import tab, save that sheet as CSV, then use Jira issue import. If import feels heavy, manually create T001 to T010 first.","Map fields:\nIssue Type -> Issue Type\nSummary -> Summary\nDescription -> Description\nPriority -> Priority\nLabels -> Labels\nStatus -> Status\nStory Points -> Story Points\nEpic Link -> Parent/Epic if available\nExternal ID -> External ID or ignore","Jira project key","Backlog contains the learning project tasks.","No cost."],
+  [4,"02 VS Code","Open the repo in VS Code.","Open VS Code, then File > Open Folder and select this repository folder.","cd C:\\Users\\local.admin\\Documents\\Work\\Repositories\\gcpgitdemo\\data-engineering-on-gcp\ncode .","Local repo path","VS Code opens with the integrated terminal rooted in this repo.","No cost."],
+  [5,"02 VS Code","Install expected extensions.","Install extensions from VS Code marketplace.","code --install-extension ms-python.python\ncode --install-extension ms-toolsai.jupyter\ncode --install-extension GoogleCloudTools.cloudcode\ncode --install-extension ms-vscode-remote.remote-ssh\ncode --install-extension GitHub.vscode-pull-request-github\ncode --install-extension redhat.vscode-yaml","None","VS Code has Python, Jupyter, Cloud Code, Remote SSH, GitHub PR, and YAML support.","No cost."],
+  [6,"03 Terminal basics","Practice Windows file management safely.","Create a scratch folder, move a file, rename it, list files, then delete only the scratch folder.","New-Item -ItemType Directory -Force JasonPlayground\\scratch\nSet-Content JasonPlayground\\scratch\\hello.txt \"hello gcp\"\nGet-ChildItem JasonPlayground\\scratch\nRename-Item JasonPlayground\\scratch\\hello.txt hello_renamed.txt\nMove-Item JasonPlayground\\scratch\\hello_renamed.txt JasonPlayground\\hello_renamed.txt\nGet-ChildItem JasonPlayground\nRemove-Item JasonPlayground\\hello_renamed.txt\nRemove-Item JasonPlayground\\scratch -Force","None","You can manage files from the VS Code terminal.","No cost."],
+  [7,"04 Git","Check Git and repo state.","Run basic Git inspection commands.","git --version\ngit status\ngit branch\ngit remote -v","None","You know whether Git is installed and whether a remote is configured.","No cost."],
+  [8,"04 Git","Configure Git identity.","Set your Git author name and email.","git config --global user.name \"Your Name\"\ngit config --global user.email \"your.email@example.com\"\ngit config --global --list","Your Name, your.email@example.com","Future commits use your identity.","No cost."],
+  [9,"04 GitHub","Authenticate to GitHub.","Use GitHub CLI if installed, otherwise install it or use SSH.","gh --version\ngh auth login\ngh auth status","GitHub account","Terminal can authenticate to GitHub.","No cost."],
+  [10,"04 GitHub","Create or connect a GitHub repo.","If this repo already has the correct remote, keep it. Otherwise create a new private repo and push a branch.","gh repo create GITHUB_USER/REPO_NAME --private --source . --remote origin --push\ngit checkout -b codex/jason-playground-plan\ngit push -u origin codex/jason-playground-plan","GITHUB_USER, REPO_NAME","GitHub repository and working branch exist.","No cost."],
+  [11,"05 Local structure","Create the study folder layout.","Create folders for data, source code, DAGs, SQL, notebooks, and docs.","New-Item -ItemType Directory -Force JasonPlayground\\datasets\\raw\nNew-Item -ItemType Directory -Force JasonPlayground\\datasets\\processed\nNew-Item -ItemType Directory -Force JasonPlayground\\src\\jobs\nNew-Item -ItemType Directory -Force JasonPlayground\\src\\utils\nNew-Item -ItemType Directory -Force JasonPlayground\\dags\nNew-Item -ItemType Directory -Force JasonPlayground\\sql\\gold\nNew-Item -ItemType Directory -Force JasonPlayground\\sql\\validation\nNew-Item -ItemType Directory -Force JasonPlayground\\notebooks\nNew-Item -ItemType Directory -Force JasonPlayground\\docs","None","Project folders exist for the actual build.","No cost."],
+  [12,"06 GCP account","Create/select your GCP project.","Use the Console for first-time setup. Confirm billing and free trial status. Then set the project in gcloud.","gcloud auth login\ngcloud projects list\ngcloud config set project PROJECT_ID\ngcloud config list","PROJECT_ID","gcloud is authenticated and points to your learning project.","No resource cost yet."],
+  [13,"06 GCP config","Set region and zone defaults.","Use one region consistently for GCS, Dataproc, BigQuery, and Composer where possible.","gcloud config set compute/region REGION\ngcloud config set compute/zone ZONE\ngcloud config get-value compute/region\ngcloud config get-value compute/zone","REGION, ZONE","Default region and zone are configured.","No cost."],
+  [14,"06 GCP APIs","Enable required services.","Enable APIs needed for the project.","gcloud services enable compute.googleapis.com\ngcloud services enable dataproc.googleapis.com\ngcloud services enable storage.googleapis.com\ngcloud services enable bigquery.googleapis.com\ngcloud services enable composer.googleapis.com\ngcloud services enable iam.googleapis.com\ngcloud services enable secretmanager.googleapis.com\ngcloud services enable logging.googleapis.com","None","GCP services are enabled.","Enabling APIs is usually free, but resources cost money."],
+  [15,"06 Cost guardrail","Create a budget alert before compute.","In Cloud Console, go to Billing > Budgets and alerts. Create a budget like USD 5 or USD 10 with 50%, 80%, 100% alerts.","Console navigation:\nBilling > Budgets and alerts > Create budget\nScope: PROJECT_ID\nAmount: 5 or 10 USD\nAlerts: 50%, 80%, 100%","PROJECT_ID, budget amount","You will receive billing warning emails.","Very important before Dataproc/Composer."],
+  [16,"07 GCS Bronze","Create the lake bucket.","Create one bucket with medallion prefixes for learning simplicity.","gcloud storage buckets create gs://BUCKET --location=REGION --uniform-bucket-level-access\ngcloud storage ls","BUCKET, REGION","Bucket exists.","Small storage cost once files are uploaded."],
+  [17,"07 GCS Bronze","Create local raw folders.","Prepare local folder mirrors for CSV and JSON landing files.","New-Item -ItemType Directory -Force JasonPlayground\\datasets\\raw\\csv\nNew-Item -ItemType Directory -Force JasonPlayground\\datasets\\raw\\json\nNew-Item -ItemType Directory -Force JasonPlayground\\datasets\\raw\\manifests","None","Local raw landing folders exist.","No cost."],
+  [18,"08 Dataset script","Ask Codex to generate the dataset script.","Prompt Codex: Create JasonPlayground/src/generate_dataset.py that generates retail CSV and JSONL data for customers, products, stores, orders, order_items, payments, shipments, inventory, clickstream, and order_status_events.","Prompt to Codex:\nCreate the dataset generator now. It should use only Python standard library if possible, produce repeatable data with --seed, support --profile small, and write to JasonPlayground/datasets/raw.","Profile and row-count preference","A tested generator script is created.","No cost."],
+  [19,"08 Dataset script","Run the generator.","After Codex creates the script, run it.","python JasonPlayground\\src\\generate_dataset.py --profile small --seed 42 --output JasonPlayground\\datasets\\raw\nGet-ChildItem JasonPlayground\\datasets\\raw -Recurse","None unless script adds more arguments","CSV and JSONL files exist locally.","No cost."],
+  [20,"07 GCS Bronze","Upload raw data to GCS bronze.","Upload CSV and JSON files into bronze paths.","gcloud storage cp --recursive JasonPlayground\\datasets\\raw\\csv gs://BUCKET/bronze/csv/load_date=2026-05-27/\ngcloud storage cp --recursive JasonPlayground\\datasets\\raw\\json gs://BUCKET/bronze/json/load_date=2026-05-27/\ngcloud storage ls --recursive gs://BUCKET/bronze/","BUCKET, load date","Bronze raw files are in GCS.","Storage and operation cost, usually tiny for small data."],
+  [21,"09 Dataproc","Create a short-lived Spark cluster.","Create a single-node Dataproc cluster only when ready to use Spark.","gcloud dataproc clusters create CLUSTER --region=REGION --single-node --enable-component-gateway --image-version=2.2-debian12 --master-machine-type=e2-standard-2 --master-boot-disk-size=50GB --properties=spark:spark.sql.shuffle.partitions=8 --labels=purpose=learning,owner=jason","CLUSTER, REGION","Dataproc cluster is running.","This costs money while running. Delete when done."],
+  [22,"09 Dataproc","SSH to Dataproc from VS Code terminal.","Connect to the Dataproc master node.","gcloud dataproc clusters describe CLUSTER --region=REGION --format=\"value(config.masterConfig.instanceNames[0])\"\ngcloud compute ssh MASTER_VM_NAME --zone=ZONE","CLUSTER, REGION, ZONE, MASTER_VM_NAME","You have a shell on the Dataproc node.","Cluster must be running."],
+  [23,"09 Dataproc","Connect VS Code Remote SSH.","In VS Code, use Remote-SSH: Connect to Host. Use the Dataproc VM SSH target generated by gcloud or connect once from terminal first.","VS Code Command Palette:\nRemote-SSH: Connect to Host...\nChoose the Dataproc host or add one to ~/.ssh/config","MASTER_VM_NAME, zone","Remote VS Code window opens on Dataproc.","Cluster must be running."],
+  [24,"10 Spark Bronze Read","Validate Spark can read GCS.","Run PySpark on Dataproc and read one bronze file.","pyspark\n\n# inside PySpark\nbucket = \"BUCKET\"\ndf = spark.read.option(\"header\", True).csv(f\"gs://{bucket}/bronze/csv/load_date=2026-05-27/customers.csv\")\ndf.printSchema()\ndf.show(5, truncate=False)\nexit()","BUCKET, file name, load date","Spark reads raw bronze data from GCS.","Cluster must be running."],
+  [25,"10 Spark Silver","Ask Codex to create bronze-to-silver PySpark job.","Prompt Codex to create src/jobs/bronze_to_silver.py with explicit schemas, dataset parameter, run date, source bucket, output bucket, quarantine output, and Parquet write.","Prompt to Codex:\nCreate a PySpark bronze_to_silver.py job for the generated datasets. It should accept --dataset, --bucket, --run-date, read bronze CSV/JSONL, apply explicit schemas and basic quality checks, write silver Parquet and quarantine bad records.","BUCKET, run date","A reusable Spark job script exists.","No direct cost until run."],
+  [26,"10 Spark Silver","Run one silver job through Dataproc.","Submit the job for one dataset first, such as customers.","gcloud dataproc jobs submit pyspark JasonPlayground/src/jobs/bronze_to_silver.py --cluster=CLUSTER --region=REGION -- --dataset customers --bucket BUCKET --run-date 2026-05-27","CLUSTER, REGION, BUCKET, run date","silver/customers Parquet appears in GCS.","Cluster must be running."],
+  [27,"10 Spark Silver","Validate silver output.","List GCS output and query with Spark.","gcloud storage ls --recursive gs://BUCKET/silver/customers/\n\npyspark\nsilver = spark.read.parquet(\"gs://BUCKET/silver/customers/run_date=2026-05-27/\")\nsilver.printSchema()\nsilver.show(10, truncate=False)\nexit()","BUCKET, run date","Silver data has clean schema and rows.","Cluster must be running."],
+  [28,"11 BigQuery Gold","Create BigQuery datasets.","Create datasets for silver references and gold marts.","bq --location=REGION mk --dataset PROJECT_ID:silver_external\nbq --location=REGION mk --dataset PROJECT_ID:gold_marts\nbq ls PROJECT_ID:","PROJECT_ID, REGION","BigQuery datasets exist.","Storage/query costs apply when used."],
+  [29,"11 BigQuery Gold","Create external table over silver Parquet.","Start with customers, then repeat for other silver tables.","bq mk --external_table_definition=gs://BUCKET/silver/customers/run_date=2026-05-27/*.parquet@PARQUET PROJECT_ID:silver_external.customers","BUCKET, PROJECT_ID, run date","BigQuery can query silver Parquet.","Query costs apply."],
+  [30,"11 BigQuery Gold","Ask Codex to create gold SQL.","Prompt Codex to create SQL scripts for dim_customer, dim_product, fact_order_item, daily_sales_mart, fulfillment_mart, and validation checks.","Prompt to Codex:\nCreate BigQuery SQL scripts under JasonPlayground/sql/gold and sql/validation for the medallion gold layer using the silver_external tables.","PROJECT_ID, dataset names","Gold SQL scripts exist.","No cost until queries run."],
+  [31,"11 BigQuery Gold","Run a gold SQL script.","Use bq query to run the generated SQL.","bq query --use_legacy_sql=false < JasonPlayground\\sql\\gold\\daily_sales_mart.sql\nbq query --use_legacy_sql=false \"SELECT * FROM `PROJECT_ID.gold_marts.daily_sales_mart` LIMIT 10\"","PROJECT_ID","Gold mart is populated and queryable.","Query/storage costs apply."],
+  [32,"12 Composer Airflow","Create Composer only when ready.","Create Composer after Dataproc and BigQuery logic works manually. This is later, because it can cost more than the other learning steps.","gcloud composer environments create COMPOSER_ENV --location REGION --image-version composer-2-airflow-2 --environment-size small","COMPOSER_ENV, REGION","Airflow environment exists.","Composer can cost money while running. Delete when done."],
+  [33,"12 Composer Airflow","Ask Codex to create DAG.","Prompt Codex to create dags/medallion_pipeline.py using variables for project_id, region, bucket, cluster, and run_date.","Prompt to Codex:\nCreate a Cloud Composer Airflow DAG that validates bronze files, submits Dataproc PySpark silver jobs, runs BigQuery gold SQL, and runs validation queries. Use Airflow variables, retries, and clear task ids.","PROJECT_ID, REGION, BUCKET, CLUSTER","DAG file exists and is parameterized.","No cost until deployed/run."],
+  [34,"12 Composer Airflow","Deploy DAG to Composer.","Find Composer DAG bucket, then copy DAG.","gcloud composer environments describe COMPOSER_ENV --location REGION --format=\"value(config.dagGcsPrefix)\"\ngcloud storage cp JasonPlayground\\dags\\medallion_pipeline.py DAG_GCS_PREFIX/","COMPOSER_ENV, REGION, DAG_GCS_PREFIX","DAG appears in Airflow UI.","Composer must be running."],
+  [35,"12 Composer Airflow","Run and monitor DAG.","Trigger DAG in Airflow UI and inspect task logs.","Airflow UI > DAGs > medallion_pipeline > Trigger DAG\nCLI option:\ngcloud composer environments run COMPOSER_ENV --location REGION dags trigger -- medallion_pipeline","COMPOSER_ENV, REGION","End-to-end pipeline runs from Airflow.","Composer and Dataproc costs apply."],
+  [36,"13 Cleanup","Delete costly resources after each session.","Delete Composer first if created, then Dataproc, and inspect leftover resources.","gcloud composer environments delete COMPOSER_ENV --location REGION\ngcloud dataproc clusters delete CLUSTER --region REGION\ngcloud compute addresses list\ngcloud storage ls\nbq ls","COMPOSER_ENV, CLUSTER, REGION","No idle Composer or Dataproc resources remain.","Most important cost-control step."],
+  [37,"14 Git wrap-up","Commit your completed planning files.","Review changes, commit, and push.","git status\ngit add JasonPlayground\ngit commit -m \"Add GCP medallion learning plan\"\ngit push","None","Planning artifacts are versioned in GitHub.","No cost."],
+];
+
+const datasetRows = [
+  ["Dataset","Format","Bronze Path","Silver Table","Gold Usage","Key Checks"],
+  ["customers","CSV","bronze/csv/customers/load_date={date}/","silver.customers","dim_customer, customer_behavior_mart","customer_id unique; email valid; created_at not null"],
+  ["products","CSV","bronze/csv/products/load_date={date}/","silver.products","dim_product, daily_sales_mart","product_id unique; price >= 0; category not null"],
+  ["stores","CSV","bronze/csv/stores/load_date={date}/","silver.stores","dim_store, daily_sales_mart","store_id unique; region not null"],
+  ["orders","CSV","bronze/csv/orders/order_date={date}/","silver.orders","fact_order_item","order_id unique; valid status; customer_id exists"],
+  ["order_items","CSV","bronze/csv/order_items/order_date={date}/","silver.order_items","fact_order_item","order_item_id unique; subtotal = qty * price"],
+  ["payments","CSV","bronze/csv/payments/payment_date={date}/","silver.payments","fact_payment","payment_id unique; amount valid; status valid"],
+  ["shipments","CSV","bronze/csv/shipments/ship_date={date}/","silver.shipments","fact_shipment, fulfillment_mart","delivered_at >= shipped_at when delivered"],
+  ["inventory","CSV","bronze/csv/inventory/snapshot_date={date}/","silver.inventory","inventory snapshots","quantity_on_hand >= 0"],
+  ["clickstream","JSONL","bronze/json/clickstream/event_date={date}/","silver.clickstream","customer_behavior_mart","event_id unique; event_ts valid; event_name allowed"],
+  ["order_status_events","JSONL","bronze/json/order_status_events/event_date={date}/","silver.order_status_events","shipment/order lifecycle analysis","event_id unique; order_id exists"],
+];
+
+const gcpObjects = [
+  ["Object Type","Suggested Name Pattern","Purpose","Create When","Delete When Idle"],
+  ["GCP Project","jason-gcp-de-playground","Isolated learning sandbox","Start of project","Optional after study"],
+  ["GCS Bucket","gs://{project-id}-lake-{region}","Bronze/silver/gold/scripts/temp prefixes","Bronze module","After exporting needed artifacts"],
+  ["Dataproc Cluster","jason-dp-dev","Short-lived Spark development and job execution","Spark module","Immediately after Spark work"],
+  ["BigQuery Dataset","gold_marts","Gold analytics tables","Gold module","After final review if avoiding cost"],
+  ["Composer Environment","jason-composer-dev","Airflow orchestration practice","Orchestration module only","Immediately after Composer module"],
+  ["Service Account","sa-medallion-pipeline","Pipeline execution identity","GCP setup","Keep if project stays active"],
+  ["Budget","gcp-de-learning-budget","Cost guardrail","Before resources","Keep while project exists"],
+];
+
+function addSheet(name, values, options = {}) {
+  const sheet = workbook.worksheets.add(name);
+  sheet.getRangeByIndexes(0, 0, values.length, values[0].length).values = values;
+  const header = sheet.getRangeByIndexes(0, 0, 1, values[0].length);
+  header.format = { fill: "#1F4E78", font: { bold: true, color: "#FFFFFF" } };
+  sheet.getRangeByIndexes(0, 0, values.length, values[0].length).format = {
+    wrapText: true,
+    verticalAlignment: "top",
+  };
+  for (let i = 0; i < values[0].length; i++) {
+    sheet.getRangeByIndexes(0, i, values.length, 1).format.columnWidth = options.widths?.[i] ?? 22;
+  }
+  sheet.getRangeByIndexes(0, 0, values.length, values[0].length).format.borders = {
+    insideHorizontal: { style: "Continuous", color: "#D9E2F3" },
+    insideVertical: { style: "Continuous", color: "#D9E2F3" },
+  };
+  if (options.tableName) {
+    const lastCol = String.fromCharCode("A".charCodeAt(0) + values[0].length - 1);
+    const table = sheet.tables.add(`A1:${lastCol}${values.length}`, true, options.tableName);
+    table.style = "TableStyleMedium2";
+  }
+  return sheet;
+}
+
+addSheet("README", [["Topic","Notes"], ...toolNotes], { tableName: "ReadmeTable", widths: [28, 90] });
+addSheet("Start_Here", nextActions, { tableName: "StartHereTable", widths: [10, 30, 82, 28, 50] });
+addSheet("Epics_User_Stories", [["Epic ID","Epic","User Story","Acceptance Criteria","Primary Tools","Priority"], ...epics], { tableName: "EpicsTable", widths: [12, 34, 72, 58, 32, 14] });
+addSheet("Detailed_Tasks", [["Task ID","Epic ID","Issue Type","Summary","Description","Detailed Steps","Acceptance Criteria","Primary Service","VS Code or Terminal Practice","Priority","Story Points","Status","Dependencies","Labels","Cost Note"], ...tasks], { tableName: "DetailedTasksTable", widths: [12, 10, 12, 34, 60, 70, 50, 24, 28, 12, 12, 14, 18, 24, 36] });
+
+const jiraRows = [
+  ["Issue Type","Summary","Description","Priority","Labels","Status","Story Points","Epic Link","External ID"],
+  ...epics.map(e => ["Epic", e[1], `${e[2]}\n\nAcceptance Criteria: ${e[3]}`, e[5], "epic;medallion", "To Do", "", e[0], e[0]]),
+  ...tasks.map(t => [t[2], t[3], `${t[4]}\n\nDetailed Steps: ${t[5]}\n\nAcceptance Criteria: ${t[6]}\n\nCost Note: ${t[14]}`, t[9], t[13], t[11], t[10], t[1], t[0]]),
+];
+addSheet("Jira_Import", jiraRows, { tableName: "JiraImportTable", widths: [14, 42, 96, 12, 28, 14, 12, 14, 14] });
+
+function csvEscape(value) {
+  const text = String(value ?? "");
+  if (/[",\r\n]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
+await fs.mkdir("jira_import", { recursive: true });
+await fs.writeFile(
+  "jira_import/gcp_medallion_jira_import.csv",
+  jiraRows.map(row => row.map(csvEscape).join(",")).join("\r\n"),
+  "utf8",
+);
+
+addSheet("Runbook", detailedRunbook, { tableName: "RunbookTable", widths: [18, 10, 34, 70, 42, 28] });
+addSheet("Task_2_Playbook", task2Playbook, { tableName: "Task2PlaybookTable", widths: [8, 22, 28, 54, 82, 32, 42, 34] });
+addSheet("Dataset_Design", datasetRows, { tableName: "DatasetDesignTable", widths: [24, 12, 46, 24, 34, 48] });
+addSheet("GCP_Objects", gcpObjects, { tableName: "GcpObjectsTable", widths: [22, 38, 44, 26, 28] });
+
+const checks = [
+  ["Checklist Area","Check","Done"],
+  ["Cost","Budget alert created before Composer/Dataproc resources","No"],
+  ["Cost","Dataproc cluster deleted after Spark sessions","No"],
+  ["Cost","Composer environment deleted after orchestration module","No"],
+  ["Bronze","Raw files are immutable and partitioned by load_date or event/order date","No"],
+  ["Silver","All transformations use explicit schemas","No"],
+  ["Silver","Rejected records land in quarantine paths","No"],
+  ["Gold","Revenue totals reconcile from silver to gold","No"],
+  ["Operations","Airflow DAG has retries and clear logs","No"],
+  ["Docs","Terminal command journal is updated","No"],
+  ["GitHub","Final PR created and reviewed","No"],
+];
+addSheet("Acceptance_Checks", checks, { tableName: "ChecksTable", widths: [24, 70, 12] });
+
+const readme = workbook.worksheets.getItem("README");
+readme.getRange("A8").values = [["Sources verified"]];
+readme.getRange("B8").values = [["Jira Free: https://www.atlassian.com/software/jira/jira/pricing | GitHub Projects: https://docs.github.com/en/issues/planning-and-tracking-with-projects | Trello pricing checked for comparison: https://trello.com/en-US/pricing | ClickUp pricing checked for comparison: https://clickup.com/pricing"]];
+readme.getRange("A8:B8").format = { fill: "#E2F0D9", font: { bold: true } };
+
+await fs.mkdir("previews", { recursive: true });
+for (const sheetName of ["README", "Start_Here", "Detailed_Tasks", "Jira_Import", "Task_2_Playbook"]) {
+  const preview = await workbook.render({
+    sheetName,
+    autoCrop: "all",
+    scale: 0.75,
+    format: "png",
+  });
+  await fs.writeFile(`previews/${sheetName}.png`, new Uint8Array(await preview.arrayBuffer()));
+}
+
+const xlsx = await SpreadsheetFile.exportXlsx(workbook);
+await xlsx.save(outputPath);
+
+const instructionWorkbook = Workbook.create();
+instructionWorkbook.comments.setSelf({ displayName: "Codex" });
+
+function addInstructionSheet(name, values, widths = []) {
+  const sheet = instructionWorkbook.worksheets.add(name);
+  const colCount = values[0].length;
+  const normalizedValues = values.map(row => {
+    if (row.length === colCount) return row;
+    if (row.length > colCount) return [...row.slice(0, colCount - 1), row.slice(colCount - 1).join(" | ")];
+    return [...row, ...Array(colCount - row.length).fill("")];
+  });
+  sheet.getRangeByIndexes(0, 0, normalizedValues.length, colCount).values = normalizedValues;
+  sheet.getRangeByIndexes(0, 0, 1, colCount).format = {
+    fill: "#305496",
+    font: { bold: true, color: "#FFFFFF" },
+  };
+  sheet.getRangeByIndexes(0, 0, normalizedValues.length, colCount).format = {
+    wrapText: true,
+    verticalAlignment: "top",
+  };
+  for (let i = 0; i < colCount; i++) {
+    sheet.getRangeByIndexes(0, i, normalizedValues.length, 1).format.columnWidth = widths[i] ?? 26;
+  }
+  const lastCol = String.fromCharCode("A".charCodeAt(0) + colCount - 1);
+  const safeTableName = `Tbl_${name.replace(/[^A-Za-z0-9]/g, "")}`;
+  const table = sheet.tables.add(`A1:${lastCol}${normalizedValues.length}`, true, safeTableName);
+  table.style = "TableStyleMedium9";
+}
+
+const instructionHeader = ["Step", "Objective", "Instruction", "Command / Code / Navigation", "Replace placeholders", "Expected result", "Stop and ask Codex when"];
+
+addInstructionSheet("Start_Here", [
+  instructionHeader,
+  [1, "Understand the two-workbook system", "Use the Jira workbook for backlog import/export. Use this workbook as your line-by-line study guide.", "Open both files in JasonPlayground.", "None", "You know which file is for project tracking and which file is for learning instructions.", "You are unsure whether to import everything to Jira now."],
+  [2, "Use JasonPlayground as working directory", "For the rest of this learning project, run commands from JasonPlayground unless a row explicitly says otherwise.", "cd C:\\Users\\local.admin\\Documents\\Work\\Repositories\\gcpgitdemo\\data-engineering-on-gcp\\JasonPlayground", "None", "Your terminal prompt is inside JasonPlayground.", "A command assumes a different folder or cannot find a file."],
+  [3, "Use generated Jira CSV", "For Jira import, use the generated CSV file directly. Do not manually export the Jira_Import Excel sheet unless the CSV is missing.", "jira_import\\gcp_medallion_jira_import.csv", "None", "You have a ready CSV to upload to Jira.", "Jira rejects the CSV or asks for fields you do not understand."],
+  [4, "Use the detailed sheets", "The older numbered sheets are now lightweight summaries. Follow the D-prefixed sheets for actual work: D01 through D09.", "Follow in this order:\nD01_Project_Management\nD02_VSCode_Terminal\nD03_Git_GitHub\nD04_GCP_Account_CLI\nD05_GCS_Bronze\nD06_Dataproc_SSH\nD07_Spark_Silver\nD08_BigQuery_Gold\nD09_Composer_Airflow\nD10_Cleanup", "None", "You are using the most detailed step-by-step instructions.", "You see a row that still feels like it assumes knowledge."],
+  [5, "Fill parameters first", "Before running cloud commands, decide your project-specific values and keep them in a private note.", "PROJECT_ID, REGION, ZONE, BUCKET, CLUSTER, COMPOSER_ENV, GITHUB_USER, REPO_NAME", "All listed values", "You can copy commands and replace placeholders consistently.", "You do not know which GCP region to use."],
+  [6, "Do local setup before cloud setup", "Finish Jira, VS Code, Git, GitHub, and local dataset work before creating Dataproc or Composer.", "Follow sheets in order from left to right.", "None", "You delay cloud cost until your local workflow is ready.", "A command fails or a tool is not installed."],
+  [7, "Use Codex as implementation partner", "When a row says ask Codex, ask me to generate, test, and explain the script before you run it on GCP.", "Example: Create the dataset generator now and explain how I run it.", "None", "You learn the code and avoid copy-paste mystery.", "You want a script created or debugged."],
+], [8, 32, 70, 76, 30, 52, 42]);
+
+addInstructionSheet("01_Project_Management", [
+  instructionHeader,
+  [1, "Know the wording first", "In current Jira Cloud, Atlassian may show the word Space instead of Project. For this guide, Jira Space means the same container we planned as a Jira Project.", "Reference meaning:\nJira Space = where your board/backlog/work items live\nWork item = issue/task/story/epic item\nBoard = Kanban/Scrum visual workflow", "None", "You will not be surprised when Jira says Space.", "The screen uses a different word than Space, Project, or Work item."],
+  [2, "Open Jira product page", "Open the Jira product page. Do not look for the project name yet. First you need to get into or create an Atlassian site.", "Browser: https://www.atlassian.com/software/jira", "Atlassian account", "You see a Jira page with buttons such as Get it free, Try it free, Sign up, or Sign in.", "You land on a marketing page and cannot find any sign-up or sign-in button."],
+  [3, "Choose the free path", "Click the free/start button. The wording may be Get it free, Try it free, Start for free, or Sign up. Choose Jira, not Confluence, Trello, Jira Service Management, or Jira Product Discovery.", "Click one of these if visible:\nGet it free\nTry it free\nStart for free\nSign up\n\nProduct to choose: Jira", "Atlassian account", "You are asked to log in, sign up, or choose/create a site.", "It asks you to choose several Atlassian products and you are not sure which one is plain Jira."],
+  [4, "Create or select Atlassian site", "If Atlassian asks for a site name or site URL, create one. This is not the Jira space yet. It is your whole Atlassian cloud site.", "Example site name: Jason GCP Learning\nExample site URL if asked: jason-gcp-learning.atlassian.net", "Site name or URL", "You enter your Atlassian site/home area.", "It says the site URL is unavailable or asks for organization setup you do not understand."],
+  [5, "Find the Spaces area", "Once inside Jira, look at the left navigation. Find Spaces. If you see Projects instead, use Projects. If you see a plus sign beside Spaces, click it.", "Click path options:\nLeft sidebar > Spaces > +\nLeft sidebar > Spaces > Create space\nTop or side Create button > Space\nIf older UI: Projects > Create project", "None", "You reach a template selection screen for a new Jira space/project.", "You clicked Atlassian Projects instead of Jira Spaces, or you cannot find Spaces."],
+  [6, "Choose the correct template family", "Pick a Jira Software template suitable for learning agile work. Use Kanban for simplest flow. Use Scrum only if you want sprint planning.", "Recommended:\nJira Software > Kanban\nAlternative:\nJira Software > Scrum\nAvoid for now:\nService management, Product discovery, Blank Confluence space", "Template choice", "You are asked to configure the new space.", "You only see business templates or service request templates."],
+  [7, "Choose team-managed if asked", "If Jira asks Team-managed or Company-managed, choose Team-managed. It is simpler for one person and does not require deep Jira admin knowledge.", "Selection: Team-managed", "None", "Jira continues to space setup.", "Team-managed is not offered."],
+  [8, "Enter the space name", "Now enter the learning container name.", "Name: GCP Medallion Learning", "Space name", "The name field is filled.", "Jira says the name is invalid."],
+  [9, "Enter the key if shown", "If Jira shows a Key field, use GCPDE. If it does not show a key, continue; Jira may create one automatically.", "Key: GCPDE", "Space key if visible", "Space key is set or auto-generated.", "Jira says GCPDE is already taken."],
+  [10, "Create the space", "Click Create, Create space, or Next until the space is created. Do not import anything yet.", "Button wording may be:\nCreate\nCreate space\nNext\nUse template", "None", "You land inside the new Jira space board/backlog.", "You are taken to a page that does not show a board, backlog, or work items."],
+  [11, "Confirm you are in the right place", "Look for the space name GCP Medallion Learning in the sidebar or top area. Look for Board, List, Timeline, Backlog, or Work items.", "Visual check only:\nSpace name = GCP Medallion Learning\nYou can see board/list/backlog navigation", "None", "You are ready to create/import work items.", "You cannot tell whether you are in Jira or another Atlassian product."],
+  [12, "Create one manual test item", "Before importing the whole workbook, create one simple task manually so you understand what Jira calls items in your UI.", "Click Create or Create work item\nType/Work item type: Task\nSummary: Test - confirm Jira setup\nDescription: This is a disposable setup test.\nSave/Create", "None", "A test task appears on the board/list.", "You cannot find Create or it asks for fields you do not recognize."],
+  [13, "Decide import now or later", "If you are still learning Jira, do not import the full backlog yet. Manually create only the first 5 to 10 tasks. Import later once the space feels familiar.", "Manual-first option:\nCreate tasks T001 to T010 from the Jira workbook.\n\nImport option:\nUse generated CSV file:\njira_import\\gcp_medallion_jira_import.csv", "Your comfort level", "You avoid flooding Jira before knowing the UI.", "You want me to simplify the Jira import file further."],
+  [14, "Import backlog if ready", "Use the generated CSV file directly. Do not manually export from Excel unless this CSV is missing or you intentionally edited the workbook data.", "CSV file:\njira_import\\gcp_medallion_jira_import.csv\n\nPossible Jira paths depending on UI:\nSpace settings > Import\nSettings gear > System > External system import\nFilters/List/Issues area > Import CSV\n\nMap:\nSummary -> Summary\nDescription -> Description\nIssue Type -> Work item type\nPriority -> Priority\nLabels -> Labels\nStatus -> Status\nStory Points -> Story points if available\nExternal ID -> External ID if available\nEpic Link -> Parent/Epic if Jira supports it", "Jira space key, generated CSV file", "Epics/stories/tasks appear as work items.", "You cannot find CSV import or mapping fields do not match."],
+  [15, "Create working filters", "Only after work items exist, create saved filters so you can export this learning space later.", "JQL examples if Jira still accepts project key:\nproject = GCPDE ORDER BY Rank ASC\nproject = GCPDE AND statusCategory != Done ORDER BY Rank ASC\n\nIf Jira asks for Space instead of Project, use the UI filter builder: Space = GCP Medallion Learning.", "Space key or space name", "You can view only this learning space's work.", "JQL rejects project because your Jira uses updated Space wording."],
+  [16, "Export project snapshot", "When you want an Excel snapshot, export the issue/work item search results. Jira Cloud usually exports CSV, which opens in Excel.", "Search/list/filter results > Export\nChoose CSV current fields or CSV all fields\nOpen downloaded CSV in Excel", "Saved filter or space", "You have an Excel-openable export of the Jira work items.", "You specifically need native .xlsx rather than CSV."],
+], [8, 30, 68, 82, 28, 44, 38]);
+
+addInstructionSheet("02_VSCode_Git_GitHub", [
+  instructionHeader,
+  [1, "Open project in VS Code", "Open this repository as your main dev area.", "cd C:\\Users\\local.admin\\Documents\\Work\\Repositories\\gcpgitdemo\\data-engineering-on-gcp\ncode .", "None", "VS Code opens in the project folder.", "code command is not recognized."],
+  [2, "Install extensions", "Install extensions for Python, Jupyter, Cloud Code, Remote SSH, GitHub PRs, and YAML.", "code --install-extension ms-python.python\ncode --install-extension ms-toolsai.jupyter\ncode --install-extension GoogleCloudTools.cloudcode\ncode --install-extension ms-vscode-remote.remote-ssh\ncode --install-extension GitHub.vscode-pull-request-github\ncode --install-extension redhat.vscode-yaml", "None", "VS Code has the main development tools.", "An extension install fails."],
+  [3, "Practice terminal file commands", "Create, inspect, rename, move, and delete safe scratch files.", "New-Item -ItemType Directory -Force JasonPlayground\\scratch\nSet-Content JasonPlayground\\scratch\\hello.txt \"hello gcp\"\nGet-ChildItem JasonPlayground\\scratch\nRename-Item JasonPlayground\\scratch\\hello.txt hello_renamed.txt\nMove-Item JasonPlayground\\scratch\\hello_renamed.txt JasonPlayground\\hello_renamed.txt\nRemove-Item JasonPlayground\\hello_renamed.txt\nRemove-Item JasonPlayground\\scratch -Force", "None", "You can manage Windows files from VS Code terminal.", "You are not sure what a command will delete."],
+  [4, "Check Git", "Confirm Git works and inspect repo status.", "git --version\ngit status\ngit branch\ngit remote -v", "None", "Git status is understood.", "Git is missing or remote is wrong."],
+  [5, "Configure Git identity", "Set the name and email used in commits.", "git config --global user.name \"Your Name\"\ngit config --global user.email \"your.email@example.com\"\ngit config --global --list", "Your Name, email", "Commits will use your identity.", "You need separate work/personal Git identities."],
+  [6, "Authenticate GitHub", "Use GitHub CLI for the easiest VS Code terminal workflow.", "gh --version\ngh auth login\ngh auth status", "GitHub account", "Terminal can access GitHub.", "gh is not installed."],
+  [7, "Create branch", "Work on a branch before pushing changes.", "git checkout -b codex/jason-playground-plan\ngit status", "Branch name if you want a different one", "You are on a learning branch.", "Branch already exists."],
+], [8, 30, 68, 82, 28, 44, 38]);
+
+addInstructionSheet("03_GCP_Setup", [
+  instructionHeader,
+  [1, "Create/select GCP project", "Use Google Cloud Console for first-time setup, then point gcloud at the project.", "gcloud auth login\ngcloud projects list\ngcloud config set project PROJECT_ID\ngcloud config list", "PROJECT_ID", "gcloud is authenticated and using the right project.", "You cannot see your project."],
+  [2, "Set defaults", "Set region and zone once so later commands are shorter.", "gcloud config set compute/region REGION\ngcloud config set compute/zone ZONE\ngcloud config get-value compute/region\ngcloud config get-value compute/zone", "REGION, ZONE", "Default region and zone are configured.", "You are unsure which region to pick."],
+  [3, "Enable APIs", "Enable APIs for storage, compute, Dataproc, BigQuery, Composer, IAM, Secret Manager, and logging.", "gcloud services enable compute.googleapis.com\ngcloud services enable dataproc.googleapis.com\ngcloud services enable storage.googleapis.com\ngcloud services enable bigquery.googleapis.com\ngcloud services enable composer.googleapis.com\ngcloud services enable iam.googleapis.com\ngcloud services enable secretmanager.googleapis.com\ngcloud services enable logging.googleapis.com", "None", "Required GCP services are enabled.", "Permission is denied."],
+  [4, "Create budget alert", "Do this before Dataproc or Composer.", "Console: Billing > Budgets and alerts > Create budget\nScope: PROJECT_ID\nAmount: 5 or 10 USD\nAlerts: 50%, 80%, 100%", "PROJECT_ID, amount", "Billing guardrails are active.", "You cannot access Billing."],
+  [5, "Create service account later", "Do not create service-account keys unless a lesson truly requires them. Prefer attached service accounts and IAM roles.", "Console: IAM & Admin > Service Accounts\nName: sa-medallion-pipeline", "Service account name", "Pipeline identity exists when needed.", "A command asks for more IAM permissions."],
+], [8, 30, 68, 82, 28, 44, 38]);
+
+addInstructionSheet("04_Datasets_Bronze_GCS", [
+  instructionHeader,
+  [1, "Create local folders", "Create raw CSV, JSON, and manifest folders.", "New-Item -ItemType Directory -Force JasonPlayground\\datasets\\raw\\csv\nNew-Item -ItemType Directory -Force JasonPlayground\\datasets\\raw\\json\nNew-Item -ItemType Directory -Force JasonPlayground\\datasets\\raw\\manifests", "None", "Local raw folders exist.", "Folder creation fails."],
+  [2, "Ask Codex for dataset generator", "Ask me to create a Python script that generates repeatable synthetic retail data.", "Prompt: Create JasonPlayground/src/generate_dataset.py using Python standard library. It should generate customers, products, stores, orders, order_items, payments, shipments, inventory, clickstream JSONL, and order_status_events JSONL. Include --profile, --seed, and --output.", "Profile and row counts if desired", "Script is created and explained.", "You want bigger data or different business domain."],
+  [3, "Run generator", "Generate small local data first.", "python JasonPlayground\\src\\generate_dataset.py --profile small --seed 42 --output JasonPlayground\\datasets\\raw\nGet-ChildItem JasonPlayground\\datasets\\raw -Recurse", "None", "CSV and JSONL files exist locally.", "Python is missing or script errors."],
+  [4, "Create GCS bucket", "Create one bucket and use prefixes for bronze, silver, gold, scripts, and temp.", "gcloud storage buckets create gs://BUCKET --location=REGION --uniform-bucket-level-access\ngcloud storage ls", "BUCKET, REGION", "Bucket exists.", "Bucket name is already taken."],
+  [5, "Upload bronze raw data", "Upload raw generated files to immutable-style bronze paths.", "gcloud storage cp --recursive JasonPlayground\\datasets\\raw\\csv gs://BUCKET/bronze/csv/load_date=2026-05-27/\ngcloud storage cp --recursive JasonPlayground\\datasets\\raw\\json gs://BUCKET/bronze/json/load_date=2026-05-27/\ngcloud storage ls --recursive gs://BUCKET/bronze/", "BUCKET, load date", "Bronze files are in GCS.", "Upload fails or object paths look wrong."],
+], [8, 30, 68, 82, 28, 44, 38]);
+
+addInstructionSheet("05_Dataproc_Spark", [
+  instructionHeader,
+  [1, "Create Dataproc cluster", "Create a short-lived single-node cluster only when ready to run Spark.", "gcloud dataproc clusters create CLUSTER --region=REGION --single-node --enable-component-gateway --image-version=2.2-debian12 --master-machine-type=e2-standard-2 --master-boot-disk-size=50GB --properties=spark:spark.sql.shuffle.partitions=8 --labels=purpose=learning,owner=jason", "CLUSTER, REGION", "Cluster is running.", "Quota, region, or billing error appears."],
+  [2, "SSH from terminal", "Find the master VM and connect to it.", "gcloud dataproc clusters describe CLUSTER --region=REGION --format=\"value(config.masterConfig.instanceNames[0])\"\ngcloud compute ssh MASTER_VM_NAME --zone=ZONE", "CLUSTER, REGION, ZONE, MASTER_VM_NAME", "You are inside the Dataproc VM shell.", "SSH key setup fails."],
+  [3, "Connect VS Code Remote SSH", "Use Remote-SSH to open the Dataproc host as a VS Code remote workspace.", "VS Code Command Palette > Remote-SSH: Connect to Host > choose Dataproc host", "MASTER_VM_NAME", "Remote VS Code window opens.", "Host does not appear."],
+  [4, "Validate PySpark reads bronze", "Run PySpark and read a CSV from GCS.", "pyspark\nbucket = \"BUCKET\"\ndf = spark.read.option(\"header\", True).csv(f\"gs://{bucket}/bronze/csv/load_date=2026-05-27/customers.csv\")\ndf.printSchema()\ndf.show(5, truncate=False)\nexit()", "BUCKET, load date", "Spark can read GCS bronze data.", "GCS permission or path error appears."],
+  [5, "Ask Codex for silver job", "Ask me to create a bronze_to_silver.py PySpark job with explicit schemas and quality checks.", "Prompt: Create a PySpark bronze_to_silver.py job for the generated datasets. It should accept --dataset, --bucket, --run-date, write silver Parquet, and write bad rows to quarantine.", "BUCKET, run date", "Reusable Spark job exists.", "You want to review the schema before coding."],
+  [6, "Submit silver job", "Run one dataset first, then expand.", "gcloud dataproc jobs submit pyspark JasonPlayground/src/jobs/bronze_to_silver.py --cluster=CLUSTER --region=REGION -- --dataset customers --bucket BUCKET --run-date 2026-05-27", "CLUSTER, REGION, BUCKET, run date", "Silver Parquet exists in GCS.", "Job fails in Dataproc logs."],
+  [7, "Validate silver output", "List the output and read it back with Spark.", "gcloud storage ls --recursive gs://BUCKET/silver/customers/\npyspark\nsilver = spark.read.parquet(\"gs://BUCKET/silver/customers/run_date=2026-05-27/\")\nsilver.printSchema()\nsilver.show(10, truncate=False)\nexit()", "BUCKET, run date", "Silver output is clean and typed.", "No files are written."],
+], [8, 30, 68, 82, 28, 44, 38]);
+
+addInstructionSheet("06_BigQuery_Gold", [
+  instructionHeader,
+  [1, "Create datasets", "Create BigQuery datasets for silver external references and gold marts.", "bq --location=REGION mk --dataset PROJECT_ID:silver_external\nbq --location=REGION mk --dataset PROJECT_ID:gold_marts\nbq ls PROJECT_ID:", "PROJECT_ID, REGION", "Datasets exist.", "bq command is missing."],
+  [2, "Create external table", "Expose silver Parquet to BigQuery.", "bq mk --external_table_definition=gs://BUCKET/silver/customers/run_date=2026-05-27/*.parquet@PARQUET PROJECT_ID:silver_external.customers", "BUCKET, PROJECT_ID, run date", "BigQuery can query silver customers.", "External table command fails."],
+  [3, "Ask Codex for gold SQL", "Ask me to create SQL scripts for dimensions, facts, marts, and validation.", "Prompt: Create BigQuery SQL scripts under JasonPlayground/sql/gold and sql/validation for dim_customer, dim_product, fact_order_item, daily_sales_mart, fulfillment_mart, and validation checks.", "PROJECT_ID, dataset names", "Gold SQL files exist.", "You want a different mart design."],
+  [4, "Run gold SQL", "Run one SQL file and inspect results.", "bq query --use_legacy_sql=false < JasonPlayground\\sql\\gold\\daily_sales_mart.sql\nbq query --use_legacy_sql=false \"SELECT * FROM `PROJECT_ID.gold_marts.daily_sales_mart` LIMIT 10\"", "PROJECT_ID", "Gold mart is queryable.", "SQL references wrong project/dataset."],
+], [8, 30, 68, 82, 28, 44, 38]);
+
+addInstructionSheet("07_Composer_Airflow", [
+  instructionHeader,
+  [1, "Create Composer later", "Create Composer only after manual GCS, Spark, and BigQuery steps work.", "gcloud composer environments create COMPOSER_ENV --location REGION --image-version composer-2-airflow-2 --environment-size small", "COMPOSER_ENV, REGION", "Airflow environment exists.", "You are not ready for orchestration costs."],
+  [2, "Ask Codex for DAG", "Ask me to create a Cloud Composer DAG with variables, retries, and clear task ids.", "Prompt: Create JasonPlayground/dags/medallion_pipeline.py. It should validate bronze files, submit Dataproc silver jobs, run BigQuery gold SQL, and run validation queries using Airflow variables.", "PROJECT_ID, REGION, BUCKET, CLUSTER", "DAG file exists.", "You want to use Dataproc workflow templates instead."],
+  [3, "Deploy DAG", "Find the Composer DAG bucket and copy the DAG.", "gcloud composer environments describe COMPOSER_ENV --location REGION --format=\"value(config.dagGcsPrefix)\"\ngcloud storage cp JasonPlayground\\dags\\medallion_pipeline.py DAG_GCS_PREFIX/", "COMPOSER_ENV, REGION, DAG_GCS_PREFIX", "DAG appears in Airflow UI.", "DAG import errors appear."],
+  [4, "Run DAG", "Trigger manually first. Watch every task log.", "Airflow UI > DAGs > medallion_pipeline > Trigger DAG\nor\ngcloud composer environments run COMPOSER_ENV --location REGION dags trigger -- medallion_pipeline", "COMPOSER_ENV, REGION", "End-to-end pipeline runs.", "A task fails and you need log analysis."],
+], [8, 30, 68, 82, 28, 44, 38]);
+
+addInstructionSheet("08_Cleanup", [
+  instructionHeader,
+  [1, "Delete Composer", "Delete Composer as soon as you are done with orchestration practice.", "gcloud composer environments delete COMPOSER_ENV --location REGION", "COMPOSER_ENV, REGION", "Composer is gone.", "Delete command asks for confirmation and you are unsure."],
+  [2, "Delete Dataproc", "Delete Dataproc cluster after Spark work.", "gcloud dataproc clusters delete CLUSTER --region REGION", "CLUSTER, REGION", "Cluster is gone.", "Cluster is still needed by a running job."],
+  [3, "Inspect leftovers", "Check static IPs, buckets, BigQuery datasets, and billing dashboard.", "gcloud compute addresses list\ngcloud storage ls\nbq ls\nConsole: Billing > Reports", "None", "No surprise resources are running.", "You see resources you do not recognize."],
+  [4, "Commit learning artifacts", "Commit docs/scripts/workbooks after reviewing status.", "git status\ngit add JasonPlayground\ngit commit -m \"Add GCP medallion learning plan\"\ngit push", "None", "Work is safely versioned.", "Git shows unrelated files you did not change."],
+], [8, 30, 68, 82, 28, 44, 38]);
+
+const detailedHeader = ["Step", "Where you are", "What you should see", "Action to take", "Exact command / click path", "If it differs", "Done when"];
+
+addInstructionSheet("D01_Project_Management", [
+  detailedHeader,
+  [1, "Browser", "You need to start Jira setup from the web.", "Open the Jira product page.", "https://www.atlassian.com/software/jira", "If you land on an Atlassian marketing page, look for Get it free, Try it free, Start for free, or Sign in.", "You see a way to start or sign in."],
+  [2, "Atlassian page", "Buttons may say Get it free, Try it free, Start for free, or Sign up.", "Choose the free/start path for Jira.", "Click Get it free or equivalent.", "If several products appear, choose Jira. Do not choose Confluence, Trello, Jira Service Management, or Jira Product Discovery for this project.", "You are asked to sign in, sign up, or choose a site."],
+  [3, "Login/signup", "You may see Google login, Microsoft login, email login, or create account.", "Sign in with your preferred Atlassian account.", "Use your own email/account.", "If MFA or email verification appears, complete it before continuing.", "You are inside Atlassian or asked to create/select a site."],
+  [4, "Site setup", "You may be asked for site name or URL.", "Create/select an Atlassian site. This is not the Jira project/space yet.", "Suggested site name: Jason GCP Learning\nSuggested URL if available: jason-gcp-learning.atlassian.net", "If unavailable, add numbers or initials. The exact site URL is not important for learning.", "You reach Jira home or Atlassian home."],
+  [5, "Jira home/sidebar", "Current Jira may say Spaces. Older Jira may say Projects.", "Find the place to create a Jira container.", "Look for one of these:\nLeft sidebar > Spaces > +\nLeft sidebar > Spaces > Create space\nTop Create button > Space\nProjects > Create project", "If you only see Apps, Teams, Goals, or Home, search the page for Jira or use the app switcher to open Jira first.", "You see templates or a create-space form."],
+  [6, "Template selection", "Templates may include Kanban, Scrum, Bug tracking, Service management, Product discovery.", "Choose Jira Software Kanban.", "Click Jira Software > Kanban.", "If Kanban is hidden, use Search templates and type Kanban. If asked Scrum vs Kanban, pick Kanban for now.", "You move to setup/configuration."],
+  [7, "Management type", "Jira may ask Team-managed or Company-managed.", "Choose Team-managed.", "Click Team-managed.", "If not shown, continue. Free/simple Jira spaces often choose this automatically.", "You can enter a name."],
+  [8, "Space/project form", "You see Name and maybe Key fields.", "Enter the learning space/project name.", "Name: GCP Medallion Learning", "If Jira uses Project instead of Space, still use the same name.", "Name is accepted."],
+  [9, "Space/project form", "You may see Key.", "Set key if visible.", "Key: GCPDE", "If GCPDE is taken, use GCPD, GCPDE1, or JGCP. Write down the final key.", "Key is accepted or auto-generated."],
+  [10, "Create screen", "Button may say Create, Create space, Use template, or Next.", "Create the space/project.", "Click Create or continue through prompts.", "If Jira asks about sample data, skip it if possible. If it forces sample data, accept and delete later.", "You land in a board/list/backlog view."],
+  [11, "New Jira space", "You should see GCP Medallion Learning somewhere, plus Board/List/Backlog/Timeline/Work items.", "Confirm you are inside the right Jira space.", "Visual check only.", "If you are in an Atlassian overview page, click Jira then select GCP Medallion Learning from Spaces.", "You can see a board or work item list."],
+  [12, "Jira space", "There should be a Create button or Create work item button.", "Create one test task before importing.", "Click Create.\nType: Task\nSummary: Test - confirm Jira setup\nDescription: This is a disposable setup test.\nClick Create/Save.", "If Type is hidden, just enter the summary and save. If it says Work item instead of issue, that is fine.", "A test task appears."],
+  [13, "Jira space", "You now know how work items look.", "Delete or mark the test task Done.", "Open test task > More actions ... > Delete, or drag it to Done.", "If delete is unavailable, leave it Done. It will not hurt anything.", "Test item no longer distracts you."],
+  [14, "Local file", "The CSV already exists in JasonPlayground.", "Confirm the CSV exists before import.", "From VS Code terminal:\ncd C:\\Users\\local.admin\\Documents\\Work\\Repositories\\gcpgitdemo\\data-engineering-on-gcp\\JasonPlayground\nGet-Item jira_import\\gcp_medallion_jira_import.csv", "If file missing, ask Codex to regenerate Jira CSV.", "PowerShell prints the CSV file."],
+  [15, "Jira import area", "CSV import may be under Space settings, System settings, or Import.", "Find CSV import.", "Try these paths:\nSpace settings > Import\nSettings gear > System > External system import\nSettings gear > System > Import and export > External system import\nIssues/List view > Import CSV", "If you cannot find import, use manual creation for T001-T010 first and ask Codex for the current import path based on your screenshot.", "You reach a CSV upload screen."],
+  [16, "CSV upload screen", "There is a file picker.", "Upload the generated CSV.", "File: C:\\Users\\local.admin\\Documents\\Work\\Repositories\\gcpgitdemo\\data-engineering-on-gcp\\JasonPlayground\\jira_import\\gcp_medallion_jira_import.csv", "If Jira rejects file type, confirm it is .csv and not opened/locked by Excel.", "Jira shows field mapping."],
+  [17, "Field mapping", "Jira asks how columns map to fields.", "Map the obvious fields first.", "Summary -> Summary\nDescription -> Description\nIssue Type -> Work item type or Issue Type\nPriority -> Priority\nLabels -> Labels\nStatus -> Status", "If Story Points is missing, skip it. If Epic Link is missing, skip it and link epics later manually.", "Required fields are mapped."],
+  [18, "Field mapping", "Jira may ask for date formats or values.", "Accept defaults for fields we use.", "No date fields are required in current CSV.", "If Jira asks to create missing values for priorities/statuses, allow creation or map High/Medium to existing values.", "Import validation passes."],
+  [19, "Import preview", "Jira previews created work items or warns about rows.", "Review warnings before final import.", "Click Validate or Next.", "If many rows fail, cancel and ask Codex to simplify the CSV. Do not force a broken import.", "Preview looks reasonable."],
+  [20, "Import complete", "Jira confirms import.", "Open board/list/backlog and inspect imported items.", "Filter/search: GCP Medallion Learning", "If epics and tasks are flat, that is acceptable for now. We can link hierarchy later.", "You see the backlog in Jira."],
+], [8, 24, 40, 44, 78, 58, 42]);
+
+addInstructionSheet("D02_VSCode_Terminal", [
+  detailedHeader,
+  [1, "Windows desktop", "VS Code should be installed.", "Open VS Code.", "Start Menu > Visual Studio Code", "If VS Code is missing, install it first from https://code.visualstudio.com/.", "VS Code window is open."],
+  [2, "VS Code", "You need to open the working folder, not just a file.", "Open JasonPlayground's parent repo folder.", "File > Open Folder > C:\\Users\\local.admin\\Documents\\Work\\Repositories\\gcpgitdemo\\data-engineering-on-gcp", "If asked to trust the folder, choose Trust because this is your local learning repo.", "Explorer shows repo files and JasonPlayground folder."],
+  [3, "VS Code", "Terminal may not be visible.", "Open integrated terminal.", "Terminal > New Terminal", "If terminal opens in a different shell, PowerShell is fine. Use the commands as written.", "Terminal appears at bottom."],
+  [4, "Terminal", "Prompt may start in repo root or another folder.", "Move into JasonPlayground.", "cd C:\\Users\\local.admin\\Documents\\Work\\Repositories\\gcpgitdemo\\data-engineering-on-gcp\\JasonPlayground", "If path has spaces in your environment later, wrap it in quotes.", "Prompt path ends with JasonPlayground."],
+  [5, "Terminal", "You need to confirm current folder.", "Print current location.", "Get-Location", "If not JasonPlayground, run the cd command again.", "Output path ends in JasonPlayground."],
+  [6, "Terminal", "You need to know what files exist.", "List the working folder.", "Get-ChildItem", "If you see only a few files, that is okay at this stage.", "You see workbook files, previews, jira_import, and builder script."],
+  [7, "Terminal", "Practice safe folder creation.", "Create a scratch folder.", "New-Item -ItemType Directory -Force scratch", "If it says item already exists, that is fine.", "scratch folder exists."],
+  [8, "Terminal", "Practice writing a harmless text file.", "Create a small file.", "Set-Content scratch\\hello.txt \"hello from JasonPlayground\"", "If blocked, check you are inside JasonPlayground.", "hello.txt exists."],
+  [9, "Terminal", "Practice reading a file.", "Print file contents.", "Get-Content scratch\\hello.txt", "If file not found, list scratch with Get-ChildItem scratch.", "Terminal prints hello text."],
+  [10, "Terminal", "Practice renaming.", "Rename the scratch file.", "Rename-Item scratch\\hello.txt hello_renamed.txt", "If destination exists, delete old scratch files or choose another name.", "scratch contains hello_renamed.txt."],
+  [11, "Terminal", "Practice moving files.", "Move file up one folder.", "Move-Item scratch\\hello_renamed.txt hello_renamed.txt", "If file not found, check exact filename with Get-ChildItem scratch.", "hello_renamed.txt is in JasonPlayground."],
+  [12, "Terminal", "Practice deleting only known scratch files.", "Delete the test file and folder.", "Remove-Item hello_renamed.txt\nRemove-Item scratch -Force", "Do not use wildcards for deletion while learning.", "scratch and test file are gone."],
+  [13, "VS Code", "Extensions improve development.", "Install key extensions from terminal.", "code --install-extension ms-python.python\ncode --install-extension ms-toolsai.jupyter\ncode --install-extension GoogleCloudTools.cloudcode\ncode --install-extension ms-vscode-remote.remote-ssh\ncode --install-extension GitHub.vscode-pull-request-github\ncode --install-extension redhat.vscode-yaml", "If code is not recognized, install from Extensions UI manually.", "Extensions are installed or already installed."],
+  [14, "VS Code", "You need a command journal.", "Create docs folder and terminal journal.", "New-Item -ItemType Directory -Force docs\nSet-Content docs\\terminal_journal.md \"# Terminal Journal`n\"", "If docs already exists, command is okay.", "docs\\terminal_journal.md exists."],
+  [15, "VS Code", "Record what you just learned.", "Append terminal basics to journal.", "Add-Content docs\\terminal_journal.md \"`n## Windows file commands`n- Get-Location`n- Get-ChildItem`n- New-Item`n- Set-Content`n- Get-Content`n- Rename-Item`n- Move-Item`n- Remove-Item`n\"", "If markdown looks plain, that is fine.", "Journal contains first notes."],
+], [8, 24, 40, 44, 78, 58, 42]);
+
+addInstructionSheet("D03_Git_GitHub", [
+  detailedHeader,
+  [1, "JasonPlayground terminal", "You should already be in JasonPlayground.", "Confirm location.", "Get-Location", "If not in JasonPlayground, cd there first.", "Path ends with JasonPlayground."],
+  [2, "Terminal", "Git may or may not be installed.", "Check Git version.", "git --version", "If command not found, install Git for Windows and restart VS Code.", "A Git version prints."],
+  [3, "Terminal", "You are inside a subfolder of a Git repo.", "Check repository status.", "git status", "If it says not a git repository, open the parent repo folder in VS Code.", "Git reports untracked JasonPlayground or changes."],
+  [4, "Terminal", "You need your Git author identity.", "Check current Git identity.", "git config --global user.name\ngit config --global user.email", "If blank or wrong, set it in next step.", "You know current identity."],
+  [5, "Terminal", "Set your Git author identity.", "Replace placeholders with your real name/email.", "git config --global user.name \"Your Name\"\ngit config --global user.email \"your.email@example.com\"", "Use GitHub email if you want commits tied to GitHub.", "Git identity is set."],
+  [6, "Terminal", "Confirm identity.", "List global config.", "git config --global --list", "If you see multiple user.name or user.email values, ask Codex before editing config.", "Correct name/email appear."],
+  [7, "Terminal", "Check current branch.", "Print branch list.", "git branch --show-current\ngit branch", "If detached HEAD appears, stop and ask Codex.", "You know your branch."],
+  [8, "Terminal", "Create a learning branch if you are on main/master.", "Use a codex-prefixed branch.", "git checkout -b codex/jason-playground-plan", "If branch exists, use git switch codex/jason-playground-plan.", "You are on learning branch."],
+  [9, "Terminal", "Check remote.", "Show Git remotes.", "git remote -v", "If no remote appears, you will create/connect GitHub later.", "You know whether origin exists."],
+  [10, "Terminal", "Check GitHub CLI.", "See whether gh exists.", "gh --version", "If command not found, install GitHub CLI from https://cli.github.com/ or use GitHub website/SSH.", "gh version prints."],
+  [11, "Terminal", "Authenticate GitHub CLI.", "Log in through browser/device flow.", "gh auth login", "Choose GitHub.com, HTTPS, authenticate with browser unless you prefer SSH.", "gh reports success."],
+  [12, "Terminal", "Confirm GitHub auth.", "Check auth status.", "gh auth status", "If not logged in, rerun gh auth login.", "GitHub auth is valid."],
+  [13, "Terminal", "If no remote exists, create a GitHub repo.", "Only run this if git remote -v showed nothing or wrong repo.", "gh repo create REPO_NAME --private --source .. --remote origin --push", "REPO_NAME, and note this runs from JasonPlayground using .. as repo root.", "Remote repo exists and origin is set."],
+  [14, "Terminal", "Stage only JasonPlayground when ready.", "Review before staging.", "git status --short", "If unrelated files appear outside JasonPlayground, do not stage them.", "You know what changed."],
+  [15, "Terminal", "Stage your learning files.", "Stage JasonPlayground only.", "git add .", "Because current folder is JasonPlayground, this stages only this working directory.", "Files are staged."],
+  [16, "Terminal", "Commit when ready.", "Create a commit.", "git commit -m \"Add Jason GCP learning workspace\"", "If Git says nothing to commit, there were no staged changes.", "Commit succeeds."],
+  [17, "Terminal", "Push branch.", "Push to GitHub.", "git push -u origin codex/jason-playground-plan", "If branch name differs, use your branch name.", "Branch exists on GitHub."],
+], [8, 24, 40, 44, 78, 58, 42]);
+
+addInstructionSheet("D04_GCP_Account_CLI", [
+  detailedHeader,
+  [1, "Browser", "You need a GCP account and billing awareness.", "Open Google Cloud Console.", "https://console.cloud.google.com/", "If asked to accept terms, read and accept if you are comfortable.", "Console opens."],
+  [2, "Console", "You may see project selector at top.", "Create or select a dedicated learning project.", "Top project selector > New Project\nName: Jason GCP DE Playground", "If organization restrictions block creation, use an existing personal project.", "You have a project."],
+  [3, "Console", "Project ID is globally unique and may differ from name.", "Copy the Project ID to your private notes.", "Example: jason-gcp-de-playground-123", "Do not use this exact example unless it is your actual project id.", "PROJECT_ID is known."],
+  [4, "Console Billing", "Billing must be understood before resources.", "Check Billing page and free trial/credits.", "Console menu > Billing", "If you cannot access billing, stop before creating Dataproc or Composer.", "You know billing status."],
+  [5, "Console Billing", "Budget alert protects you.", "Create budget alert.", "Billing > Budgets and alerts > Create budget\nScope: your PROJECT_ID\nAmount: 5 or 10 USD\nAlerts: 50%, 80%, 100%", "Choose an amount you are comfortable with.", "Budget alert exists."],
+  [6, "VS Code terminal", "Google Cloud CLI may not be installed.", "Check gcloud.", "gcloud --version", "If command not found, install Google Cloud CLI and restart VS Code.", "gcloud version prints."],
+  [7, "Terminal", "Authenticate CLI.", "Login with your Google account.", "gcloud auth login", "Use the same account as your GCP project.", "Browser login completes."],
+  [8, "Terminal", "Set active project.", "Replace PROJECT_ID.", "gcloud config set project PROJECT_ID", "Use copied project id, not project display name.", "Active project is set."],
+  [9, "Terminal", "Verify active project.", "List config.", "gcloud config list", "If project is wrong, set it again.", "Correct project appears."],
+  [10, "Terminal", "Choose region/zone.", "Use one region consistently. us-central1 is common for learning; asia-southeast1 may be closer to Manila but can vary in availability/cost.", "gcloud config set compute/region REGION\ngcloud config set compute/zone ZONE", "REGION, ZONE", "Region/zone defaults are set."],
+  [11, "Terminal", "Verify region/zone.", "Read defaults.", "gcloud config get-value compute/region\ngcloud config get-value compute/zone", "None", "Correct values print."],
+  [12, "Terminal", "Enable APIs one by one so errors are clear.", "Run service enable commands.", "gcloud services enable compute.googleapis.com\ngcloud services enable dataproc.googleapis.com\ngcloud services enable storage.googleapis.com\ngcloud services enable bigquery.googleapis.com\ngcloud services enable composer.googleapis.com\ngcloud services enable iam.googleapis.com\ngcloud services enable secretmanager.googleapis.com\ngcloud services enable logging.googleapis.com", "None", "Services enabled."],
+  [13, "Terminal", "Confirm enabled APIs.", "List enabled relevant services.", "gcloud services list --enabled --filter=\"name:(compute OR dataproc OR storage OR bigquery OR composer)\"", "None", "Relevant APIs appear."],
+  [14, "Terminal", "Create parameter note.", "Create a local parameters template that should not contain secrets.", "Set-Content docs\\local_parameters_template.md \"# Local Parameters`n`nPROJECT_ID=`nREGION=`nZONE=`nBUCKET=`nCLUSTER=jason-dp-dev`nCOMPOSER_ENV=jason-composer-dev`n\"", "None", "Template exists for your notes.", "docs folder does not exist."],
+], [8, 24, 40, 44, 78, 58, 42]);
+
+addInstructionSheet("D05_GCS_Bronze", [
+  detailedHeader,
+  [1, "Terminal", "You need local dataset folders.", "Create raw data folders.", "New-Item -ItemType Directory -Force datasets\\raw\\csv\nNew-Item -ItemType Directory -Force datasets\\raw\\json\nNew-Item -ItemType Directory -Force datasets\\raw\\manifests\nNew-Item -ItemType Directory -Force src", "If folders exist, command is still fine.", "Folders exist."],
+  [2, "Terminal", "You need a dataset generator but we have not built it yet.", "Ask Codex to create it when you reach this step.", "Prompt Codex: Create src\\generate_dataset.py using Python standard library. It should generate customers, products, stores, orders, order_items, payments, shipments, inventory CSVs plus clickstream and order_status_events JSONL. Include --profile small|medium, --seed, --output.", "Profile/row counts if you want custom sizes.", "Generator script exists.", "You want the data model changed before coding."],
+  [3, "Terminal", "After script exists, run it.", "Generate small data locally.", "python src\\generate_dataset.py --profile small --seed 42 --output datasets\\raw", "None unless script options differ.", "CSV/JSONL files are created."],
+  [4, "Terminal", "Inspect generated files.", "List files recursively.", "Get-ChildItem datasets\\raw -Recurse", "None", "You see csv/json files.", "No files generated."],
+  [5, "Terminal", "Set bucket name mentally/private note.", "Use globally unique bucket name.", "Suggested pattern: PROJECT_ID-lake-REGION\nExample command will use BUCKET placeholder.", "PROJECT_ID, REGION", "BUCKET value is decided.", "Bucket name is already taken later."],
+  [6, "Terminal", "Create bucket.", "Run gcloud storage bucket create.", "gcloud storage buckets create gs://BUCKET --location=REGION --uniform-bucket-level-access", "BUCKET, REGION", "Bucket created.", "Name unavailable or permission denied."],
+  [7, "Terminal", "Verify bucket.", "List buckets.", "gcloud storage ls", "None", "Your bucket appears.", "Bucket missing."],
+  [8, "Terminal", "Upload CSV to bronze.", "Copy local CSV folder to bronze path.", "gcloud storage cp --recursive datasets\\raw\\csv gs://BUCKET/bronze/csv/load_date=2026-05-27/", "BUCKET, load date", "CSV objects uploaded.", "Path or bucket error."],
+  [9, "Terminal", "Upload JSON to bronze.", "Copy local JSON folder to bronze path.", "gcloud storage cp --recursive datasets\\raw\\json gs://BUCKET/bronze/json/load_date=2026-05-27/", "BUCKET, load date", "JSON objects uploaded.", "Path or bucket error."],
+  [10, "Terminal", "Verify bronze objects.", "List cloud objects.", "gcloud storage ls --recursive gs://BUCKET/bronze/", "BUCKET", "Objects appear under bronze/csv and bronze/json.", "No objects appear."],
+  [11, "Terminal", "Record GCS paths.", "Create documentation for bucket layout.", "Set-Content docs\\gcs_paths.md \"# GCS Paths`n`nBucket: gs://BUCKET`nBronze CSV: gs://BUCKET/bronze/csv/load_date=2026-05-27/`nBronze JSON: gs://BUCKET/bronze/json/load_date=2026-05-27/`nSilver: gs://BUCKET/silver/`nGold temp/scripts: gs://BUCKET/scripts/`n\"", "BUCKET", "GCS path doc exists.", "docs folder missing."],
+], [8, 24, 40, 44, 78, 58, 42]);
+
+addInstructionSheet("D06_Dataproc_SSH", [
+  detailedHeader,
+  [1, "Before creating cluster", "Dataproc costs money while running.", "Confirm budget alert exists and you are ready to delete cluster after work.", "Manual check in GCP Billing.", "If no budget alert, go back to D04.", "You are comfortable creating a temporary cluster."],
+  [2, "Terminal", "APIs and region should already be set.", "Confirm gcloud project/region.", "gcloud config list\ngcloud config get-value compute/region\ngcloud config get-value compute/zone", "None", "Project/region/zone are correct.", "Wrong project appears."],
+  [3, "Terminal", "Create small single-node cluster.", "Run cluster create command.", "gcloud dataproc clusters create CLUSTER --region=REGION --single-node --enable-component-gateway --image-version=2.2-debian12 --master-machine-type=e2-standard-2 --master-boot-disk-size=50GB --properties=spark:spark.sql.shuffle.partitions=8 --labels=purpose=learning,owner=jason", "CLUSTER, REGION", "Cluster creation starts.", "Quota, billing, image, or region error appears."],
+  [4, "Terminal", "Cluster creation takes minutes.", "Wait and then list clusters.", "gcloud dataproc clusters list --region=REGION", "REGION", "Cluster status is RUNNING.", "Status is ERROR."],
+  [5, "Terminal", "Need master VM name for SSH.", "Get master VM name.", "gcloud dataproc clusters describe CLUSTER --region=REGION --format=\"value(config.masterConfig.instanceNames[0])\"", "CLUSTER, REGION", "A VM name prints.", "No VM name prints."],
+  [6, "Terminal", "Connect by SSH.", "Use the VM name from previous step.", "gcloud compute ssh MASTER_VM_NAME --zone=ZONE", "MASTER_VM_NAME, ZONE", "Remote Linux shell opens.", "SSH prompts for key setup; accept defaults unless your company policy says otherwise."],
+  [7, "Remote shell", "You are now on Dataproc VM.", "Check where you are.", "hostname\npwd\nwhoami", "None", "Commands print remote host/user.", "You are still on Windows PowerShell."],
+  [8, "Remote shell", "Check Spark commands.", "Verify Spark is available.", "spark-sql --version\npyspark --version", "None", "Spark versions print.", "Command not found."],
+  [9, "Remote shell", "Exit remote shell.", "Return to local terminal.", "exit", "None", "You are back in Windows PowerShell.", "Terminal closed entirely; reopen it."],
+  [10, "VS Code", "Remote SSH extension should be installed.", "Open Command Palette.", "Ctrl+Shift+P > Remote-SSH: Connect to Host...", "MASTER_VM_NAME", "Connection UI appears.", "Remote SSH extension missing."],
+  [11, "VS Code Remote SSH", "You need a host entry. gcloud SSH may have already configured one.", "Pick the Dataproc VM host if visible.", "Remote-SSH host list > MASTER_VM_NAME or external IP entry", "If no host appears, ask Codex to help create SSH config from gcloud compute config-ssh.", "New VS Code window opens connected to Dataproc."],
+  [12, "Remote VS Code", "Remote window may ask OS type.", "Choose Linux if asked.", "Click Linux.", "If it installs VS Code Server, wait.", "Remote Explorer opens."],
+  [13, "Remote VS Code terminal", "Open terminal on remote machine.", "Terminal > New Terminal.", "None", "Prompt is Linux, not PowerShell.", "Terminal starts on local machine instead."],
+  [14, "Remote terminal", "Clone repo later only if needed.", "For now verify access to GCS with gcloud.", "gcloud config list", "None", "Remote Dataproc service account/project is visible.", "No credentials available."],
+], [8, 24, 40, 44, 78, 58, 42]);
+
+addInstructionSheet("D07_Spark_Silver", [
+  detailedHeader,
+  [1, "Dataproc remote terminal", "Cluster must be running and bronze files must exist.", "Start PySpark.", "pyspark", "If command not found, verify you are on Dataproc VM.", "PySpark prompt appears."],
+  [2, "PySpark prompt", "You need to test GCS read.", "Read customers CSV from bronze.", "bucket = \"BUCKET\"\npath = f\"gs://{bucket}/bronze/csv/load_date=2026-05-27/customers.csv\"\ndf = spark.read.option(\"header\", True).csv(path)\ndf.printSchema()\ndf.show(5, truncate=False)", "BUCKET, load date, filename", "Schema and rows print.", "Path not found or permission denied."],
+  [3, "PySpark prompt", "Exit test shell.", "Exit PySpark.", "exit()", "None", "Back to Linux shell.", "PySpark does not exit; press Ctrl+D."],
+  [4, "Local VS Code", "Silver job does not exist yet.", "Ask Codex to create the PySpark silver job.", "Prompt Codex: Create src\\jobs\\bronze_to_silver.py. It must support --dataset, --bucket, --run-date. It must use explicit schemas for CSV/JSON, clean data, write Parquet to gs://BUCKET/silver/{dataset}/run_date=YYYY-MM-DD/, and write bad records to gs://BUCKET/quarantine/{dataset}/run_date=YYYY-MM-DD/.", "BUCKET, run date", "Script exists locally.", "You want to inspect schema design first."],
+  [5, "Local terminal", "Need to upload script or submit from local path.", "Confirm script exists.", "Get-Item src\\jobs\\bronze_to_silver.py", "None", "File exists.", "File missing."],
+  [6, "Local terminal", "Submit one job first.", "Run customers dataset only.", "gcloud dataproc jobs submit pyspark src\\jobs\\bronze_to_silver.py --cluster=CLUSTER --region=REGION -- --dataset customers --bucket BUCKET --run-date 2026-05-27", "CLUSTER, REGION, BUCKET, run date", "Dataproc job starts.", "Job upload or argument error."],
+  [7, "Local terminal", "Wait for job result.", "Review terminal output.", "No extra command; watch job logs.", "None", "Job completes with DONE.", "Job fails."],
+  [8, "Local terminal", "Verify silver files.", "List silver customers path.", "gcloud storage ls --recursive gs://BUCKET/silver/customers/run_date=2026-05-27/", "BUCKET, run date", "Parquet files appear.", "No files found."],
+  [9, "Dataproc PySpark", "Read silver Parquet.", "Validate output schema.", "pyspark\nsilver = spark.read.parquet(\"gs://BUCKET/silver/customers/run_date=2026-05-27/\")\nsilver.printSchema()\nsilver.show(10, truncate=False)\nexit()", "BUCKET, run date", "Clean typed rows print.", "Parquet read fails."],
+  [10, "Local terminal", "Repeat for each dataset after customers works.", "Submit additional datasets one by one.", "gcloud dataproc jobs submit pyspark src\\jobs\\bronze_to_silver.py --cluster=CLUSTER --region=REGION -- --dataset products --bucket BUCKET --run-date 2026-05-27\ngcloud dataproc jobs submit pyspark src\\jobs\\bronze_to_silver.py --cluster=CLUSTER --region=REGION -- --dataset orders --bucket BUCKET --run-date 2026-05-27\ngcloud dataproc jobs submit pyspark src\\jobs\\bronze_to_silver.py --cluster=CLUSTER --region=REGION -- --dataset order_items --bucket BUCKET --run-date 2026-05-27", "CLUSTER, REGION, BUCKET", "Silver paths exist for each dataset.", "Any dataset fails."],
+  [11, "Local terminal", "Record job notes.", "Append commands to terminal journal.", "Add-Content docs\\terminal_journal.md \"`n## Dataproc silver jobs`nSubmitted bronze_to_silver.py with gcloud dataproc jobs submit pyspark.`n\"", "None", "Journal updated.", "docs folder missing."],
+], [8, 24, 40, 44, 78, 58, 42]);
+
+addInstructionSheet("D08_BigQuery_Gold", [
+  detailedHeader,
+  [1, "Terminal", "Silver Parquet should exist.", "Create BigQuery datasets.", "bq --location=REGION mk --dataset PROJECT_ID:silver_external\nbq --location=REGION mk --dataset PROJECT_ID:gold_marts", "PROJECT_ID, REGION", "Datasets created.", "Dataset already exists; that is okay."],
+  [2, "Terminal", "Confirm datasets.", "List BigQuery datasets.", "bq ls PROJECT_ID:", "PROJECT_ID", "silver_external and gold_marts appear.", "bq command missing."],
+  [3, "Terminal", "Create external table for one silver dataset.", "Start with customers.", "bq mk --external_table_definition=gs://BUCKET/silver/customers/run_date=2026-05-27/*.parquet@PARQUET PROJECT_ID:silver_external.customers", "BUCKET, PROJECT_ID, run date", "External table created.", "Command syntax error or no source files."],
+  [4, "Terminal", "Test external table.", "Query customers.", "bq query --use_legacy_sql=false \"SELECT COUNT(*) AS row_count FROM `PROJECT_ID.silver_external.customers`\"", "PROJECT_ID", "Count returns.", "Table not found."],
+  [5, "Terminal", "Create more external tables after pattern works.", "Repeat for products/orders/order_items/payments/shipments.", "Use the same bq mk pattern, changing dataset path and table name.", "BUCKET, PROJECT_ID", "External tables exist.", "Schema mismatch."],
+  [6, "VS Code", "Gold SQL does not exist yet.", "Ask Codex to create gold SQL scripts.", "Prompt Codex: Create BigQuery SQL scripts under sql\\gold and sql\\validation. Include dim_customer, dim_product, dim_date, fact_order_item, daily_sales_mart, fulfillment_mart, and validation checks. Use PROJECT_ID placeholders clearly.", "PROJECT_ID, dataset names", "SQL files exist.", "You want a simpler first mart only."],
+  [7, "Terminal", "Inspect SQL files.", "List generated SQL.", "Get-ChildItem sql -Recurse", "None", "Gold and validation SQL files appear.", "Files missing."],
+  [8, "Terminal", "Run first gold script.", "Run one mart/dimension script.", "bq query --use_legacy_sql=false < sql\\gold\\daily_sales_mart.sql", "SQL script may need PROJECT_ID edits first.", "Query completes.", "SQL references wrong project/dataset."],
+  [9, "Terminal", "Query gold output.", "Preview rows.", "bq query --use_legacy_sql=false \"SELECT * FROM `PROJECT_ID.gold_marts.daily_sales_mart` LIMIT 10\"", "PROJECT_ID", "Rows print.", "Table not found."],
+  [10, "Terminal", "Run validation.", "Run validation SQL after gold tables exist.", "bq query --use_legacy_sql=false < sql\\validation\\revenue_reconciliation.sql", "Script name may differ depending what Codex generated.", "Validation returns expected result.", "Validation fails; inspect logic before proceeding."],
+], [8, 24, 40, 44, 78, 58, 42]);
+
+addInstructionSheet("D09_Composer_Airflow", [
+  detailedHeader,
+  [1, "Before Composer", "Composer can be costly.", "Only continue after manual GCS, Dataproc, Spark, and BigQuery steps work.", "Manual check: D05-D08 completed.", "If not complete, pause Composer.", "You are ready for orchestration."],
+  [2, "Terminal", "Confirm project and region.", "Check config.", "gcloud config list\ngcloud config get-value compute/region", "None", "Correct project/region shown.", "Wrong project."],
+  [3, "Terminal", "Create Composer environment.", "Create small environment.", "gcloud composer environments create COMPOSER_ENV --location REGION --image-version composer-2-airflow-2 --environment-size small", "COMPOSER_ENV, REGION", "Environment creation starts.", "Quota/cost/API error."],
+  [4, "Terminal", "Wait for environment.", "List Composer envs.", "gcloud composer environments list --locations REGION", "REGION", "Environment is RUNNING.", "Environment stuck or failed."],
+  [5, "Terminal", "Get DAG bucket path.", "Describe environment.", "gcloud composer environments describe COMPOSER_ENV --location REGION --format=\"value(config.dagGcsPrefix)\"", "COMPOSER_ENV, REGION", "DAG GCS prefix prints.", "No prefix prints."],
+  [6, "VS Code", "DAG does not exist yet.", "Ask Codex to create DAG.", "Prompt Codex: Create dags\\medallion_pipeline.py for Cloud Composer. It must validate bronze files, submit Dataproc PySpark silver jobs, run BigQuery gold SQL, run validation SQL, use Airflow variables, retries, and readable task ids.", "PROJECT_ID, REGION, BUCKET, CLUSTER", "DAG file exists.", "You want to orchestrate fewer datasets first."],
+  [7, "Terminal", "Deploy DAG.", "Copy DAG to Composer DAG folder.", "gcloud storage cp dags\\medallion_pipeline.py DAG_GCS_PREFIX/", "DAG_GCS_PREFIX", "File uploaded.", "Permission denied."],
+  [8, "Browser", "Airflow UI should be available.", "Open Composer environment then Airflow UI.", "Console > Composer > Environments > COMPOSER_ENV > Open Airflow UI", "COMPOSER_ENV", "Airflow UI opens.", "UI link unavailable."],
+  [9, "Airflow UI", "DAG parser may take a few minutes.", "Find medallion pipeline DAG.", "DAGs search: medallion", "If import errors appear, open Browse > DAG Import Errors or top error banner.", "DAG is visible and not broken."],
+  [10, "Airflow UI", "DAG likely needs variables.", "Create Airflow variables.", "Admin > Variables:\nproject_id = PROJECT_ID\nregion = REGION\nbucket = BUCKET\ncluster = CLUSTER\nrun_date = 2026-05-27", "PROJECT_ID, REGION, BUCKET, CLUSTER", "Variables saved.", "Admin menu not visible."],
+  [11, "Airflow UI", "Manual trigger is safest first.", "Trigger DAG manually.", "Open DAG > Trigger DAG", "Optional run config if DAG requires it.", "DAG run starts.", "Trigger button disabled."],
+  [12, "Airflow UI", "Monitor task grid.", "Click each task if it fails.", "Grid view > failed task > Logs", "None", "You can read logs.", "Logs are confusing; copy error to Codex."],
+  [13, "Airflow UI", "Success means orchestration works.", "Confirm all tasks green.", "Visual check.", "None", "DAG run succeeds.", "Any task is red."],
+  [14, "Terminal", "Do not leave Composer running.", "Delete Composer when done with module.", "gcloud composer environments delete COMPOSER_ENV --location REGION", "COMPOSER_ENV, REGION", "Composer deleted.", "You still need it for another immediate run."],
+], [8, 24, 40, 44, 78, 58, 42]);
+
+addInstructionSheet("D10_Cleanup", [
+  detailedHeader,
+  [1, "Terminal", "Start cleanup from JasonPlayground.", "Confirm folder.", "Get-Location", "If not JasonPlayground, cd there.", "Path ends with JasonPlayground."],
+  [2, "Terminal", "Composer is often the expensive idle resource.", "List Composer environments.", "gcloud composer environments list --locations REGION", "REGION", "You know if Composer exists.", "Command fails; check region."],
+  [3, "Terminal", "Delete Composer if present.", "Delete environment.", "gcloud composer environments delete COMPOSER_ENV --location REGION", "COMPOSER_ENV, REGION", "Composer deleted.", "You intentionally need it later today."],
+  [4, "Terminal", "Dataproc clusters cost while running.", "List Dataproc clusters.", "gcloud dataproc clusters list --region=REGION", "REGION", "You know if cluster exists.", "Wrong region."],
+  [5, "Terminal", "Delete Dataproc if present.", "Delete cluster.", "gcloud dataproc clusters delete CLUSTER --region=REGION", "CLUSTER, REGION", "Cluster deleted.", "A job is still running."],
+  [6, "Terminal", "Static external IPs can cost when unused.", "List addresses.", "gcloud compute addresses list", "None", "You see any reserved addresses.", "You do not know whether an address is safe to delete."],
+  [7, "Terminal", "Buckets store data and may cost.", "List buckets.", "gcloud storage ls", "None", "You see GCS buckets.", "You want to keep data for later."],
+  [8, "Terminal", "BigQuery datasets can store data.", "List datasets.", "bq ls", "None", "You see BigQuery datasets.", "You want to keep gold outputs for study."],
+  [9, "Browser", "Billing dashboard is final confirmation.", "Open billing reports.", "Console > Billing > Reports", "None", "You can see recent cost trend.", "Costs are higher than expected."],
+  [10, "Terminal", "Save your work.", "Review Git status.", "git status --short", "None", "You see changed files.", "Unrelated files appear."],
+  [11, "Terminal", "Stage only JasonPlayground work.", "Stage from current folder.", "git add .", "None", "JasonPlayground changes staged.", "You are not inside JasonPlayground."],
+  [12, "Terminal", "Commit.", "Commit cleanup/docs/scripts.", "git commit -m \"Update Jason GCP learning guide\"", "None", "Commit succeeds.", "Nothing to commit."],
+  [13, "Terminal", "Push.", "Push branch.", "git push", "None", "GitHub has your latest work.", "No upstream branch."],
+], [8, 24, 40, 44, 78, 58, 42]);
+
+for (const sheetName of ["Start_Here", "01_Project_Management", "05_Dataproc_Spark"]) {
+  const preview = await instructionWorkbook.render({
+    sheetName,
+    autoCrop: "all",
+    scale: 0.75,
+    format: "png",
+  });
+  await fs.writeFile(`previews/instruction_${sheetName}.png`, new Uint8Array(await preview.arrayBuffer()));
+}
+
+const instructionXlsx = await SpreadsheetFile.exportXlsx(instructionWorkbook);
+await instructionXlsx.save("gcp_medallion_learning_path_instruction_guide.xlsx");
