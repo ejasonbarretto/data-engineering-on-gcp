@@ -1,0 +1,563 @@
+Issue Type,Summary,Description,Priority,Labels,Status,Story Points,Epic Link,External ID
+Epic,Project management and study operating model,"As a solo learner, I want a realistic agile board and backlog so that I can practice delivery rituals while studying GCP data engineering.
+
+Acceptance Criteria: Jira workspace, workflow, labels, fields, and import process are ready.",High,epic;medallion,To Do,,E01,E01
+Epic,Repository and VS Code foundation,"As a developer, I want GitHub and VS Code configured so that all learning work happens from a professional dev environment.
+
+Acceptance Criteria: Repo cloned/opened in VS Code, Git identity configured, terminal workflow validated.",High,epic;medallion,To Do,,E02,E02
+Epic,GCP first-time setup and cost guardrails,"As a cloud learner, I want a controlled GCP project so that I can practice safely on free credits and avoid surprise costs.
+
+Acceptance Criteria: Project, billing, APIs, IAM, budget alerts, and cleanup routine are documented.",High,epic;medallion,To Do,,E03,E03
+Epic,Synthetic retail dataset generation,"As a data engineer, I want generated CSV and JSON datasets so that I can build a full medallion pipeline without external data dependencies.
+
+Acceptance Criteria: Generated local data includes customers, products, orders, order_items, payments, shipments, and clickstream events.",High,epic;medallion,To Do,,E04,E04
+Epic,Bronze raw landing zone in GCS,"As a data engineer, I want raw immutable files in GCS so that the lake has a traceable source-of-record layer.
+
+Acceptance Criteria: CSV and JSON files are uploaded to date-partitioned bronze paths with a manifest.",High,epic;medallion,To Do,,E05,E05
+Epic,Dataproc and Spark development environment,"As a Spark learner, I want Dataproc reachable from VS Code over SSH so that I can develop and run Spark jobs remotely.
+
+Acceptance Criteria: Single-node Dataproc cluster is created, SSH works, Spark UI is reachable, and repo is available on the cluster.",High,epic;medallion,To Do,,E06,E06
+Epic,Silver standardization pipeline,"As a data engineer, I want bronze data converted to clean Parquet tables so that downstream processing is reliable and typed.
+
+Acceptance Criteria: Silver jobs validate schemas, deduplicate, normalize timestamps, and write partitioned Parquet.",High,epic;medallion,To Do,,E07,E07
+Epic,Gold analytics layer,"As an analyst, I want curated BigQuery marts so that sales, fulfillment, and customer metrics are queryable.
+
+Acceptance Criteria: Gold fact/dimension tables and aggregate marts are available in BigQuery with validation queries.",High,epic;medallion,To Do,,E08,E08
+Epic,Airflow orchestration with Cloud Composer,"As an operator, I want the pipeline scheduled and observable so that medallion jobs can be run end to end.
+
+Acceptance Criteria: Composer DAG runs bronze checks, silver Spark jobs, gold loads, and validation tasks.",High,epic;medallion,To Do,,E09,E09
+Epic,"Testing, documentation, and teardown","As a responsible learner, I want checks, notes, and cleanup steps so that the project is repeatable and low-cost.
+
+Acceptance Criteria: Runbook, tests, screenshots checklist, and cleanup commands are complete.",Medium,epic;medallion,To Do,,E10,E10
+Task,Create Jira Free site,"Sign up or sign in to Atlassian, create a Jira project named GCP Medallion Learning, and choose a Scrum or Kanban template.
+
+Detailed Steps: Open Atlassian, create Jira Free project, set project key GCPDE, confirm backlog and board are visible.
+
+Acceptance Criteria: Project exists and can accept imported tasks.
+
+Cost Note: Free plan is sufficient for one user.",High,setup;jira,To Do,1,E01,T001
+Task,Configure Jira workflow columns,"Create or confirm statuses: Backlog, To Do, In Progress, Blocked, Review, Done.
+
+Detailed Steps: Open project settings, inspect workflow/board columns, map statuses to columns.
+
+Acceptance Criteria: Board columns match the study workflow.
+
+Cost Note: No paid features required.",High,setup;jira,To Do,1,E01,T002
+Task,Create Jira labels and components,"Add labels or components for setup, github, gcp, gcs, dataproc, spark, bigquery, airflow, qa, docs, cost.
+
+Detailed Steps: Use project settings or import labels from the task sheet.
+
+Acceptance Criteria: Imported work can be filtered by technology area.
+
+Cost Note: No paid features required.",Medium,setup;jira,To Do,1,E01,T003
+Task,Import task workbook into Jira,"Save the Jira_Import sheet as CSV and use Jira external system import or issue import.
+
+Detailed Steps: Map Summary, Issue Type, Description, Priority, Labels, Epic Link or Parent, Story Points, and Status fields.
+
+Acceptance Criteria: Imported issues preserve task order and grouping.
+
+Cost Note: Jira import behavior may vary by project type.",High,setup;jira,To Do,2,E01,T004
+Task,Create weekly study cadence,"Add recurring personal calendar blocks for planning, build, review, and cleanup.
+
+Detailed Steps: Pick 3-5 study windows per week and link them to Jira sprints or weekly board reviews.
+
+Acceptance Criteria: Study cadence is visible and realistic.
+
+Cost Note: No paid features required.",Medium,planning,To Do,1,E01,T005
+Task,Check Git installation from VS Code terminal,"Open VS Code terminal in this repo and run git --version, git status, and git branch.
+
+Detailed Steps: Record output in notes if Git is missing or repo is not initialized.
+
+Acceptance Criteria: Git works from the integrated terminal.
+
+Cost Note: No GCP cost.",High,github;vscode;terminal,To Do,1,E02,T006
+Task,Configure Git identity,"Run git config --global user.name and user.email with your GitHub identity.
+
+Detailed Steps: Validate with git config --global --list.
+
+Acceptance Criteria: Commits will show the correct author.
+
+Cost Note: No GCP cost.",High,github;terminal,To Do,1,E02,T007
+Task,Authenticate GitHub CLI or SSH,"Install or validate GitHub CLI, then run gh auth login, or configure SSH keys for GitHub.
+
+Detailed Steps: Use either HTTPS with gh auth or SSH; test with gh repo list or ssh -T git@github.com.
+
+Acceptance Criteria: GitHub authentication works from VS Code terminal.
+
+Cost Note: No GCP cost.",High,github;vscode;terminal,To Do,2,E02,T008
+Task,Create GitHub repository for playground,"Create a new GitHub repository for your medallion learning work or push this folder as a branch/project.
+
+Detailed Steps: Use GitHub UI or gh repo create, then add remote origin if needed.
+
+Acceptance Criteria: Remote repo exists and local code can push.
+
+Cost Note: No GCP cost.",High,github,To Do,2,E02,T009
+Task,Create branch strategy,"Use main for stable notes and codex or feature branches for changes.
+
+Detailed Steps: Create a first branch such as codex/jason-playground-plan and push it.
+
+Acceptance Criteria: Branching workflow is ready for pull requests.
+
+Cost Note: No GCP cost.",Medium,github,To Do,1,E02,T010
+Task,Install VS Code extensions,"Install Python, Jupyter, Google Cloud Code, Remote SSH, GitHub Pull Requests, YAML, and optional Markdown extensions.
+
+Detailed Steps: Use VS Code Extensions panel and verify each extension is enabled.
+
+Acceptance Criteria: VS Code is ready for local, cloud, and remote work.
+
+Cost Note: No GCP cost.",High,vscode;setup,To Do,2,E02,T011
+Task,Create local project structure,"Inside JasonPlayground, create folders for datasets, src, dags, sql, notebooks, docs, and scripts.
+
+Detailed Steps: Use terminal mkdir commands and commit the structure with placeholder README files if needed.
+
+Acceptance Criteria: Folder layout supports medallion development.
+
+Cost Note: No GCP cost.",High,vscode;terminal,To Do,1,E02,T012
+Task,Practice Windows terminal file operations,"Run pwd, dir, cd, mkdir, copy, move, rename, and remove-item on safe scratch files.
+
+Detailed Steps: Keep the commands in docs/terminal_cheatsheet.md.
+
+Acceptance Criteria: You can manage local files without leaving VS Code.
+
+Cost Note: No GCP cost.",Medium,terminal;docs,To Do,1,E02,T013
+Task,Create or select GCP account,"Sign in to Google Cloud and confirm billing/free trial status before creating resources.
+
+Detailed Steps: Record account email, billing account name, and whether free credits are active in a private note outside git.
+
+Acceptance Criteria: GCP account is ready and billing status is understood.
+
+Cost Note: Budget alerts are still required.",High,gcp;setup;cost,To Do,1,E03,T014
+Task,Create GCP project,"Create a project such as jason-gcp-de-playground with a unique project id.
+
+Detailed Steps: Use Console or gcloud projects create if organization policy allows it.
+
+Acceptance Criteria: Dedicated learning project exists.
+
+Cost Note: Project itself is not the main cost source.",High,gcp;setup,To Do,1,E03,T015
+Task,Install and initialize Google Cloud CLI,"Install gcloud, run gcloud init, login, and set the active project.
+
+Detailed Steps: Validate with gcloud config list and gcloud projects describe PROJECT_ID.
+
+Acceptance Criteria: gcloud works from VS Code terminal.
+
+Cost Note: No direct cost.",High,gcloud;vscode;terminal,To Do,2,E03,T016
+Task,Set default region and zone,"Choose a low-cost region and set compute/Dataproc defaults.
+
+Detailed Steps: Run gcloud config set compute/region and compute/zone.
+
+Acceptance Criteria: Commands do not need region flags every time.
+
+Cost Note: Region impacts price and availability.",Medium,gcloud;setup,To Do,1,E03,T017
+Task,Enable required APIs,"Enable Compute Engine, Dataproc, Cloud Storage, BigQuery, Cloud Composer, IAM, Secret Manager, and Cloud Logging APIs.
+
+Detailed Steps: Use Console or gcloud services enable for each service.
+
+Acceptance Criteria: All planned services can be created when needed.
+
+Cost Note: Enabling APIs is generally free; resources are not.",High,gcp;setup,To Do,2,E03,T018
+Task,Create budget alert,"Create a low monthly budget alert, for example USD 5 or 10, with notifications at 50, 80, and 100 percent.
+
+Detailed Steps: Use Billing Budgets and Alerts in Console.
+
+Acceptance Criteria: Cost alerts are active before creating compute resources.
+
+Cost Note: Critical guardrail for free-trial use.",High,cost;setup,To Do,1,E03,T019
+Task,Create service account,"Create a service account for pipeline execution with least-privilege roles for storage, BigQuery, Dataproc, and Composer as needed.
+
+Detailed Steps: Start narrow, then add roles only when a command fails due to missing permission.
+
+Acceptance Criteria: Pipeline identity exists and keys are avoided unless truly needed.
+
+Cost Note: No direct cost.",High,iam;security,To Do,2,E03,T020
+Task,Document cleanup checklist,"Create docs/cleanup_checklist.md covering Dataproc clusters, Composer environments, static IPs, buckets, BigQuery datasets, and budgets.
+
+Detailed Steps: Add exact gcloud delete commands as you learn them.
+
+Acceptance Criteria: Cleanup steps are ready before costly resources exist.
+
+Cost Note: Prevents idle cloud spend.",High,cost;docs,To Do,1,E03,T021
+Story,Design synthetic retail domain,"Define tables for customers, products, orders, order_items, payments, shipments, inventory, stores, and clickstream events.
+
+Detailed Steps: Write source-to-target notes and expected row counts in Dataset_Design sheet or docs.
+
+Acceptance Criteria: Dataset design supports bronze, silver, and gold transformations.
+
+Cost Note: No GCP cost.",High,dataset;design,To Do,3,E04,T022
+Task,Create dataset generator script,"Write a Python script that generates repeatable CSV and JSON files using a fixed seed.
+
+Detailed Steps: Output small, medium, and optional large profiles.
+
+Acceptance Criteria: Generated files can be recreated exactly.
+
+Cost Note: No GCP cost.",High,dataset;python,To Do,3,E04,T023
+Task,Generate CSV source files,"Generate customers.csv, products.csv, stores.csv, orders.csv, order_items.csv, payments.csv, shipments.csv, and inventory.csv.
+
+Detailed Steps: Use date-partition-friendly fields such as order_date and event_date.
+
+Acceptance Criteria: CSV files exist with headers and realistic values.
+
+Cost Note: No GCP cost.",High,dataset;csv,To Do,2,E04,T024
+Task,Generate JSON event files,"Generate clickstream JSON lines and order_status_event JSON lines with nested fields.
+
+Detailed Steps: Include event_id, event_ts, user/session ids, and payload attributes.
+
+Acceptance Criteria: JSON files exercise semi-structured ingestion.
+
+Cost Note: No GCP cost.",High,dataset;json,To Do,2,E04,T025
+Task,Create data quality expectations,"Define expected row counts, unique keys, allowed statuses, required columns, and referential integrity checks.
+
+Detailed Steps: Store expectations in docs/data_quality_rules.md or a YAML file.
+
+Acceptance Criteria: Each dataset has at least three validation rules.
+
+Cost Note: No GCP cost.",High,qa;dataset,To Do,2,E04,T026
+Task,Create GCS bucket naming plan,"Choose globally unique bucket names for bronze, silver, gold, scripts, and temp or use one bucket with prefixes.
+
+Detailed Steps: Record naming convention and region in docs/gcp_objects.md.
+
+Acceptance Criteria: Bucket plan is clear before creation.
+
+Cost Note: Bucket storage costs are small but real.",High,gcs;design,To Do,1,E05,T027
+Task,Create GCS bucket,"Use gcloud storage buckets create or Console to create the project bucket in your chosen region.
+
+Detailed Steps: Enable uniform bucket-level access unless a lesson requires object ACLs.
+
+Acceptance Criteria: Bucket exists and is visible from CLI.
+
+Cost Note: Storage charges apply by volume.",High,gcs;gcloud,To Do,1,E05,T028
+Task,Create bronze prefix structure,"Create prefixes such as bronze/csv/orders/load_date=YYYY-MM-DD and bronze/json/clickstream/load_date=YYYY-MM-DD.
+
+Detailed Steps: Use local path mirrors before uploading.
+
+Acceptance Criteria: Bronze structure follows medallion raw-zone convention.
+
+Cost Note: No meaningful cost beyond storage.",High,gcs;bronze,To Do,1,E05,T029
+Task,Upload bronze CSV files,"Use gcloud storage cp or gsutil cp to upload generated CSV files to bronze paths.
+
+Detailed Steps: Validate with gcloud storage ls and compare local file counts.
+
+Acceptance Criteria: CSV files are in GCS bronze.
+
+Cost Note: Storage and operation charges apply.",High,gcs;bronze;csv,To Do,2,E05,T030
+Task,Upload bronze JSON files,"Upload generated JSON files to bronze/json paths and validate object names.
+
+Detailed Steps: Use recursive commands and avoid overwriting unrelated paths.
+
+Acceptance Criteria: JSON files are in GCS bronze.
+
+Cost Note: Storage and operation charges apply.",High,gcs;bronze;json,To Do,2,E05,T031
+Task,Create bronze manifest,"Generate a manifest with source file name, path, row count, checksum, format, and load timestamp.
+
+Detailed Steps: Store manifest locally and in GCS bronze/manifests.
+
+Acceptance Criteria: Bronze files are auditable.
+
+Cost Note: No major cost.",Medium,gcs;bronze;qa,To Do,2,E05,T032
+Task,Create single-node Dataproc cluster,"Create a short-lived single-node cluster with component gateway enabled and optional JupyterLab if desired.
+
+Detailed Steps: Use small machine types and labels such as purpose=learning owner=jason.
+
+Acceptance Criteria: Cluster starts successfully.
+
+Cost Note: Delete when idle; compute costs can grow quickly.",High,dataproc;spark;cost,To Do,3,E06,T033
+Task,Validate SSH from terminal,"Run gcloud compute ssh to connect to the Dataproc master node.
+
+Detailed Steps: Exit and reconnect until the workflow is comfortable.
+
+Acceptance Criteria: SSH works from VS Code terminal.
+
+Cost Note: Cluster must be running.",High,dataproc;ssh;terminal,To Do,2,E06,T034
+Task,Connect VS Code Remote SSH to Dataproc,"Configure Remote SSH target using gcloud-generated SSH config or direct host settings.
+
+Detailed Steps: Open a remote VS Code window on the Dataproc node.
+
+Acceptance Criteria: VS Code can edit files on the cluster.
+
+Cost Note: Cluster must be running.",High,vscode;dataproc;ssh,To Do,3,E06,T035
+Task,Clone repository on Dataproc,"Clone the GitHub repository on the cluster and checkout the working branch.
+
+Detailed Steps: Validate git status and project files on the remote host.
+
+Acceptance Criteria: Remote cluster has project code.
+
+Cost Note: Cluster must be running.",High,github;dataproc,To Do,1,E06,T036
+Task,Validate Spark shell and PySpark,"Run spark-sql --version and pyspark, then read a small bronze file from GCS.
+
+Detailed Steps: Confirm Spark can access GCS without manual credential files.
+
+Acceptance Criteria: Spark can read the raw lake path.
+
+Cost Note: Cluster must be running.",High,spark;dataproc;gcs,To Do,2,E06,T037
+Task,Open Spark UI through component gateway,"Find the Dataproc web interfaces and open Spark History Server or Spark UI.
+
+Detailed Steps: Run a sample job and locate it in the UI.
+
+Acceptance Criteria: You can inspect job stages and logs.
+
+Cost Note: Cluster must be running.",Medium,dataproc;spark;ui,To Do,1,E06,T038
+Story,Build bronze-to-silver schema reader,"Create Spark logic to read CSV and JSON bronze files with explicit schemas.
+
+Detailed Steps: Avoid inferSchema for production-style code; put schemas in code or config.
+
+Acceptance Criteria: Spark reads all source datasets with expected data types.
+
+Cost Note: Cluster must be running for validation.",High,spark;silver,To Do,5,E07,T039
+Task,Implement silver customers transformation,"Clean customer names, emails, dates, geography fields, and deduplicate by customer_id.
+
+Detailed Steps: Write Parquet partitioned by load_date or customer_region if useful.
+
+Acceptance Criteria: silver/customers path is clean and queryable.
+
+Cost Note: Cluster must be running for validation.",High,spark;silver,To Do,3,E07,T040
+Task,Implement silver products transformation,"Standardize product categories, prices, active flags, and effective dates.
+
+Detailed Steps: Validate product_id uniqueness and nonnegative prices.
+
+Acceptance Criteria: silver/products path is clean and queryable.
+
+Cost Note: Cluster must be running for validation.",High,spark;silver,To Do,3,E07,T041
+Task,Implement silver orders transformation,"Normalize order timestamps, statuses, customer references, and order dates.
+
+Detailed Steps: Partition by order_date and reject invalid statuses into a quarantine path.
+
+Acceptance Criteria: silver/orders path is clean and partitioned.
+
+Cost Note: Cluster must be running for validation.",High,spark;silver,To Do,5,E07,T042
+Task,Implement silver order_items transformation,"Validate item quantities, subtotal calculations, and product references.
+
+Detailed Steps: Recalculate subtotal and flag mismatches for review.
+
+Acceptance Criteria: silver/order_items path is clean and validated.
+
+Cost Note: Cluster must be running for validation.",High,spark;silver,To Do,5,E07,T043
+Task,Implement silver payments transformation,"Standardize payment methods, amounts, payment status, and timestamps.
+
+Detailed Steps: Validate no successful negative payments unless intentionally generated as refunds.
+
+Acceptance Criteria: silver/payments path is clean and typed.
+
+Cost Note: Cluster must be running for validation.",Medium,spark;silver,To Do,3,E07,T044
+Task,Implement silver shipments transformation,"Normalize carrier, tracking status, shipped_at, delivered_at, and delivery duration.
+
+Detailed Steps: Flag impossible delivery dates into quarantine.
+
+Acceptance Criteria: silver/shipments path is clean and typed.
+
+Cost Note: Cluster must be running for validation.",Medium,spark;silver,To Do,3,E07,T045
+Task,Implement silver clickstream transformation,"Flatten JSON event payloads and standardize event timestamps, event names, session ids, and device fields.
+
+Detailed Steps: Partition by event_date.
+
+Acceptance Criteria: silver/clickstream path is clean and partitioned.
+
+Cost Note: Cluster must be running for validation.",Medium,spark;silver;json,To Do,5,E07,T046
+Task,Create reusable Spark job entrypoint,"Create a parameterized PySpark job with arguments for source path, target path, run date, and environment.
+
+Detailed Steps: Run it locally on Dataproc using spark-submit.
+
+Acceptance Criteria: Job can run one dataset at a time using parameters.
+
+Cost Note: Cluster must be running.",High,spark;dataproc,To Do,5,E07,T047
+Task,Submit silver job through Dataproc Jobs,"Use gcloud dataproc jobs submit pyspark with parameters for each silver dataset.
+
+Detailed Steps: Record job ids and logs.
+
+Acceptance Criteria: Silver transformations run as managed Dataproc jobs.
+
+Cost Note: Cluster must be running.",High,dataproc;spark;silver,To Do,3,E07,T048
+Task,Validate silver outputs,"Use gcloud storage ls, spark-sql, and PySpark count checks to confirm output paths, partitions, row counts, and schema.
+
+Detailed Steps: Compare against data quality expectations.
+
+Acceptance Criteria: Silver layer passes checks.
+
+Cost Note: Cluster must be running.",High,qa;silver,To Do,3,E07,T049
+Task,Create BigQuery datasets,"Create datasets such as bronze_meta, silver_external, and gold_marts or a clean equivalent naming convention.
+
+Detailed Steps: Set region to match GCS/Dataproc where possible.
+
+Acceptance Criteria: BigQuery datasets exist.
+
+Cost Note: BigQuery storage/query charges may apply.",High,bigquery;gold,To Do,1,E08,T050
+Task,Create external tables over silver Parquet,"Create BigQuery external tables or BigLake-style references for silver Parquet paths.
+
+Detailed Steps: Validate schema and partition pruning where available.
+
+Acceptance Criteria: BigQuery can query silver data.
+
+Cost Note: Query costs may apply.",High,bigquery;silver,To Do,3,E08,T051
+Task,Design gold star schema,"Define dim_customer, dim_product, dim_store, dim_date, fact_order_item, fact_payment, fact_shipment, and aggregate marts.
+
+Detailed Steps: Document grain and primary keys for each table.
+
+Acceptance Criteria: Gold model has clear grain and relationships.
+
+Cost Note: No major cost until data is materialized/queried.",High,bigquery;gold;design,To Do,3,E08,T052
+Task,Build gold dimensions,"Use BigQuery SQL or Spark to populate customer, product, store, and date dimensions.
+
+Detailed Steps: Include surrogate-key strategy or document why natural keys are acceptable for learning.
+
+Acceptance Criteria: Dimension tables are queryable and documented.
+
+Cost Note: Query/storage costs apply.",High,bigquery;gold,To Do,5,E08,T053
+Task,Build gold fact tables,"Create fact_order_item, fact_payment, and fact_shipment from silver tables.
+
+Detailed Steps: Validate joins and amounts.
+
+Acceptance Criteria: Fact tables are at documented grain.
+
+Cost Note: Query/storage costs apply.",High,bigquery;gold,To Do,5,E08,T054
+Task,Build daily sales mart,"Aggregate revenue, order count, item count, customer count, and average order value by date, product, and store.
+
+Detailed Steps: Compare totals to silver source data.
+
+Acceptance Criteria: daily_sales_mart is ready for analysis.
+
+Cost Note: Query/storage costs apply.",High,bigquery;gold,To Do,3,E08,T055
+Task,Build fulfillment mart,"Aggregate shipped, delivered, delayed, and average delivery duration by carrier and date.
+
+Detailed Steps: Validate delayed shipment logic.
+
+Acceptance Criteria: fulfillment_mart is ready for analysis.
+
+Cost Note: Query/storage costs apply.",Medium,bigquery;gold,To Do,3,E08,T056
+Task,Build customer behavior mart,"Join sales and clickstream activity by customer/date where generated data supports it.
+
+Detailed Steps: Calculate sessions, product views, purchases, and conversion rate.
+
+Acceptance Criteria: customer_behavior_mart is ready for analysis.
+
+Cost Note: Query/storage costs apply.",Medium,bigquery;gold,To Do,5,E08,T057
+Task,Create validation SQL checks,"Write SQL checks for row counts, revenue reconciliation, null primary keys, duplicate keys, and invalid date ranges.
+
+Detailed Steps: Store checks in sql/validation.
+
+Acceptance Criteria: Gold layer has repeatable validation queries.
+
+Cost Note: Query costs apply.",High,bigquery;qa,To Do,3,E08,T058
+Task,Create analysis notebook or saved queries,"Create a small notebook or saved SQL file showing top products, revenue trends, and fulfillment performance.
+
+Detailed Steps: Use only gold tables.
+
+Acceptance Criteria: You can explain the business outputs of the pipeline.
+
+Cost Note: Query costs apply.",Medium,bigquery;docs,To Do,2,E08,T059
+Task,Create Cloud Composer environment,"Create a small Composer environment only when ready to orchestrate and delete it after the module if cost is a concern.
+
+Detailed Steps: Record environment name, region, bucket, and Airflow UI URL.
+
+Acceptance Criteria: Composer environment is available.
+
+Cost Note: Composer can be costly; use carefully.",High,airflow;composer;cost,To Do,5,E09,T060
+Task,Prepare local Airflow development folder,"Create dags folder and install or document compatible Airflow provider versions for local linting if needed.
+
+Detailed Steps: Keep DAG code independent of hard-coded project ids where possible.
+
+Acceptance Criteria: DAG source folder is ready.
+
+Cost Note: Local setup no GCP cost.",High,airflow;vscode,To Do,2,E09,T061
+Task,Create Airflow variables plan,"Define variables for project_id, region, bucket, dataproc_cluster, run_date, bronze_prefix, silver_prefix, and gold_dataset.
+
+Detailed Steps: Create them in Airflow UI or via gcloud composer environments run.
+
+Acceptance Criteria: DAG config is externalized.
+
+Cost Note: No major extra cost.",High,airflow;config,To Do,2,E09,T062
+Task,Build orchestration DAG skeleton,"Create DAG with logical task groups: precheck, bronze_validation, silver_processing, gold_processing, validation, notify_or_log.
+
+Detailed Steps: Use clear task ids and dependencies.
+
+Acceptance Criteria: DAG parses in Airflow UI.
+
+Cost Note: Composer must be running.",High,airflow;dag,To Do,3,E09,T063
+Task,Add bronze validation tasks,"Add BashOperator or PythonOperator tasks to check GCS object existence and manifest freshness.
+
+Detailed Steps: Fail fast if required source files are missing.
+
+Acceptance Criteria: Pipeline stops before Spark if bronze is incomplete.
+
+Cost Note: Composer must be running.",High,airflow;bronze;qa,To Do,3,E09,T064
+Task,Add Dataproc silver tasks,"Use Dataproc job operators or gcloud command tasks to submit silver PySpark jobs.
+
+Detailed Steps: Pass dataset-specific arguments and run date.
+
+Acceptance Criteria: Airflow can trigger silver Spark jobs.
+
+Cost Note: Composer and Dataproc cost apply.",High,airflow;dataproc;silver,To Do,5,E09,T065
+Task,Add BigQuery gold tasks,"Use BigQueryInsertJobOperator or bq commands to run gold SQL scripts in dependency order.
+
+Detailed Steps: Parameterize project and dataset names.
+
+Acceptance Criteria: Airflow can build gold tables.
+
+Cost Note: Query costs apply.",High,airflow;bigquery;gold,To Do,5,E09,T066
+Task,Deploy DAG to Composer bucket,"Copy DAG file to the Composer environment dags bucket using gcloud storage cp or gsutil cp.
+
+Detailed Steps: Watch Airflow UI for import errors.
+
+Acceptance Criteria: DAG appears without parse errors.
+
+Cost Note: Composer must be running.",High,airflow;gcs,To Do,2,E09,T067
+Task,Run DAG manually,"Trigger the DAG manually and monitor each task in Airflow UI.
+
+Detailed Steps: Capture failed logs, fix config, and rerun as needed.
+
+Acceptance Criteria: End-to-end DAG succeeds once.
+
+Cost Note: Composer and Dataproc cost apply.",High,airflow;ops,To Do,3,E09,T068
+Task,Add retry and alert behavior,"Set retries, retry delays, task-level timeouts, and failure logging.
+
+Detailed Steps: Keep alerts simple for solo learning, such as Airflow logs and email if configured.
+
+Acceptance Criteria: DAG has realistic operational controls.
+
+Cost Note: No major extra cost.",Medium,airflow;ops,To Do,2,E09,T069
+Task,Write architecture README,"Document the medallion architecture, GCS paths, Dataproc jobs, BigQuery datasets, and Airflow DAG.
+
+Detailed Steps: Include a simple text diagram or Mermaid diagram.
+
+Acceptance Criteria: A future reader can understand the project.
+
+Cost Note: No GCP cost.",High,docs,To Do,2,E10,T070
+Task,Create terminal command journal,"Maintain docs/terminal_journal.md with commands used for Git, Windows files, gcloud, GCS, Dataproc SSH, and Composer.
+
+Detailed Steps: Group commands by module and explain placeholders.
+
+Acceptance Criteria: You have a reusable command reference.
+
+Cost Note: No GCP cost.",High,docs;terminal,To Do,2,E10,T071
+Task,Create troubleshooting log,"Track errors, root cause, fix, and prevention notes from setup through orchestration.
+
+Detailed Steps: Add at least one entry per module.
+
+Acceptance Criteria: You build debugging memory as part of the project.
+
+Cost Note: No GCP cost.",Medium,docs;qa,To Do,1,E10,T072
+Task,Add unit-style validation scripts,"Create scripts that run local schema checks and SQL validation checks where practical.
+
+Detailed Steps: Use simple CLI commands that can be repeated.
+
+Acceptance Criteria: Core checks are not only manual.
+
+Cost Note: Minimal local cost.",Medium,qa,To Do,3,E10,T073
+Task,Create GitHub pull request workflow,"Open a PR from the learning branch to main with a checklist and summary of completed modules.
+
+Detailed Steps: Review changes before merging.
+
+Acceptance Criteria: You practice professional code review flow.
+
+Cost Note: No GCP cost.",Medium,github,To Do,2,E10,T074
+Task,Run final cost cleanup,"Delete Composer environment, Dataproc cluster, static IPs, unused buckets, temporary BigQuery tables, and any service-account keys.
+
+Detailed Steps: Confirm billing dashboard after cleanup.
+
+Acceptance Criteria: No idle costly resources remain.
+
+Cost Note: Most important cost-control step.",High,cost;cleanup,To Do,2,E10,T075
+Task,Review learning outcomes,"Map completed work to skills: Git, VS Code, GCS, Dataproc, Spark, BigQuery, Composer, data modeling, QA, and operations.
+
+Detailed Steps: Update Jira statuses and write a short retrospective.
+
+Acceptance Criteria: Project is ready for next iteration or portfolio polish.
+
+Cost Note: No GCP cost.",Medium,planning;docs,To Do,1,E10,T076
